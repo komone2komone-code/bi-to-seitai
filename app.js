@@ -4,7 +4,6 @@ const IMAGE_STORE = "cards";
 
 const state = {
   exercises: [],
-  today: [],
   habits: ["", "", "", "", "", "", "", ""],
   imageFits: {},
   filter: "すべて",
@@ -90,12 +89,10 @@ function loadState() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
     state.exercises = Array.isArray(saved.exercises) ? saved.exercises : [];
-    state.today = Array.isArray(saved.today) ? saved.today.filter(id => state.exercises.some(x => x.id === id)) : [];
     state.habits = normalizeHabits(saved.habits);
     state.imageFits = normalizeImageFits(saved.imageFits);
   } catch {
     state.exercises = [];
-    state.today = [];
     state.habits = normalizeHabits([]);
     state.imageFits = {};
   }
@@ -105,7 +102,6 @@ function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({
     version: 1,
     exercises: state.exercises,
-    today: state.today,
     habits: state.habits,
     imageFits: state.imageFits,
     savedAt: new Date().toISOString()
@@ -449,67 +445,18 @@ function renderFilters() {
   });
 }
 
-function renderToday() {
-  const list = state.today.map(id => state.exercises.find(x => x.id === id)).filter(Boolean);
-  const total = list.reduce((sum, ex) => sum + exerciseDuration(ex), 0);
-
-  $("todaySummary").textContent = list.length ? `${list.length}種・${formatDuration(total)}` : "まだメニューがありません";
-  $("todayDuration").textContent = list.length
-    ? "説明部分を飛ばして、登録した区間だけ順番に再生します。"
-    : "登録した動きを「今日のメニュー」に追加してください。";
-  $("startRoutineBtn").disabled = list.length === 0;
-
-  if (!list.length) {
-    $("todayList").className = "today-list empty-state";
-    $("todayList").innerHTML = "<p>まだ今日のメニューはありません。</p>";
-    return;
-  }
-
-  $("todayList").className = "today-list";
-  $("todayList").innerHTML = list.map((ex, index) => `
-    <div class="today-row">
-      <div class="today-number">${index + 1}</div>
-      <div>
-        <strong>${escapeHtml(ex.name)}</strong>
-        <span class="card-meta">${escapeHtml(ex.part)}・${formatDuration(exerciseDuration(ex))}</span>
-      </div>
-      <div class="today-controls">
-        <button class="small-btn" data-up="${ex.id}" title="上へ" ${index === 0 ? "disabled" : ""}>↑</button>
-        <button class="small-btn" data-down="${ex.id}" title="下へ" ${index === list.length - 1 ? "disabled" : ""}>↓</button>
-        <button class="small-btn" data-remove-today="${ex.id}" title="今日から外す">×</button>
-      </div>
-    </div>
-  `).join("");
-
-  document.querySelectorAll("[data-up]").forEach(btn => btn.addEventListener("click", () => moveToday(btn.dataset.up, -1)));
-  document.querySelectorAll("[data-down]").forEach(btn => btn.addEventListener("click", () => moveToday(btn.dataset.down, 1)));
-  document.querySelectorAll("[data-remove-today]").forEach(btn => btn.addEventListener("click", () => {
-    state.today = state.today.filter(id => id !== btn.dataset.removeToday);
-    saveState(); renderAll();
-  }));
-}
-
-function moveToday(id, delta) {
-  const i = state.today.indexOf(id);
-  const j = i + delta;
-  if (i < 0 || j < 0 || j >= state.today.length) return;
-  [state.today[i], state.today[j]] = [state.today[j], state.today[i]];
-  saveState(); renderToday();
-}
-
 function renderLibrary() {
   const items = state.exercises.filter(ex => state.filter === "すべて" || ex.part === state.filter);
 
   if (!items.length) {
     $("libraryList").innerHTML = `
       <div class="empty-state" style="grid-column:1/-1">
-        <p>${state.exercises.length ? "この部位の登録はまだありません。" : "まだ整体が登録されていません。右上の「＋ 整体を追加」から始められます。"}</p>
+        <p>${state.exercises.length ? "この部位の登録はまだありません。" : "まだ整体が登録されていません。写真カードから「＋ 追加」で登録できます。"}</p>
       </div>`;
     return;
   }
 
   $("libraryList").innerHTML = items.map(ex => {
-    const inToday = state.today.includes(ex.id);
     return `
       <article class="exercise-card">
         <div class="card-top">
@@ -523,14 +470,12 @@ function renderLibrary() {
         <p class="card-memo">${escapeHtml(ex.memo || " ")}</p>
         <div class="card-actions">
           <button class="primary-btn" data-play="${ex.id}">▶ 再生</button>
-          <button class="secondary-btn" data-today="${ex.id}">${inToday ? "✓ 今日に追加済み" : "＋ 今日に追加"}</button>
         </div>
       </article>`;
   }).join("");
 
   document.querySelectorAll("#libraryList [data-play]").forEach(btn => btn.addEventListener("click", () => playSingle(btn.dataset.play)));
   document.querySelectorAll("#libraryList [data-edit]").forEach(btn => btn.addEventListener("click", () => openEditDialog(btn.dataset.edit)));
-  document.querySelectorAll("#libraryList [data-today]").forEach(btn => btn.addEventListener("click", () => toggleToday(btn.dataset.today)));
 }
 
 const CATEGORY_PAGE_SIZE = 10;
@@ -642,16 +587,9 @@ function closeCategory() {
 
 function renderAll() {
   renderFilters();
-  renderToday();
   renderLibrary();
   renderHabits();
   renderCategoryList();
-}
-
-function toggleToday(id) {
-  if (state.today.includes(id)) state.today = state.today.filter(x => x !== id);
-  else state.today.push(id);
-  saveState(); renderAll();
 }
 
 function escapeHtml(text) {
@@ -682,7 +620,6 @@ function openEditDialog(id) {
   $("startInput").value = formatTime(ex.start);
   $("endInput").value = formatTime(ex.end);
   $("memoInput").value = ex.memo || "";
-  $("todayInput").checked = state.today.includes(ex.id);
   $("deleteBtn").classList.remove("hidden");
   $("formError").textContent = "";
   $("exerciseDialog").showModal();
@@ -702,7 +639,6 @@ function saveExerciseFromForm(event) {
   const start = parseTime($("startInput").value);
   const end = parseTime($("endInput").value);
   const memo = $("memoInput").value.trim();
-  const addToday = $("todayInput").checked;
 
   let error = "";
   if (!name) error = "名前を入力してください。";
@@ -722,9 +658,6 @@ function saveExerciseFromForm(event) {
   if (existing >= 0) state.exercises[existing] = item;
   else state.exercises.unshift(item);
 
-  if (addToday && !state.today.includes(id)) state.today.push(id);
-  if (!addToday) state.today = state.today.filter(x => x !== id);
-
   saveState();
   closeExerciseDialog();
   renderAll();
@@ -732,7 +665,6 @@ function saveExerciseFromForm(event) {
 
 function removeExercise(id) {
   state.exercises = state.exercises.filter(x => x.id !== id);
-  state.today = state.today.filter(x => x !== id);
   saveState();
   closeExerciseDialog();
   renderAll();
@@ -766,14 +698,6 @@ function playSingle(id) {
   state.queue = [id];
   state.queueIndex = 0;
   openPlayerFor(ex);
-}
-
-function startRoutine() {
-  if (!state.today.length) return;
-  state.queue = [...state.today];
-  state.queueIndex = 0;
-  const ex = state.exercises.find(x => x.id === state.queue[0]);
-  if (ex) openPlayerFor(ex);
 }
 
 function openPlayerFor(ex) {
@@ -852,7 +776,6 @@ async function exportBackup() {
     version: 1,
     exportedAt: new Date().toISOString(),
     exercises: state.exercises,
-    today: state.today,
     habits: state.habits,
     imageFits: state.imageFits,
     cardImages
@@ -871,14 +794,12 @@ async function importBackup(file) {
   try {
     const text = await file.text();
     const data = JSON.parse(text);
-    if (!Array.isArray(data.exercises) || !Array.isArray(data.today)) throw new Error();
+    if (!Array.isArray(data.exercises)) throw new Error();
     const clean = data.exercises.filter(ex =>
       ex && ex.id && ex.name && ex.part && ex.url && ex.videoId &&
       Number.isFinite(ex.start) && Number.isFinite(ex.end) && ex.end > ex.start
     );
-    const validIds = new Set(clean.map(x => x.id));
     state.exercises = clean;
-    state.today = data.today.filter(id => validIds.has(id));
     if (Array.isArray(data.habits)) state.habits = normalizeHabits(data.habits);
     if (data.imageFits && typeof data.imageFits === "object") {
       state.imageFits = normalizeImageFits(data.imageFits);
@@ -895,13 +816,11 @@ async function importBackup(file) {
   }
 }
 
-$("openAddBtn").addEventListener("click", () => openAddDialog());
 $("closeDialogBtn").addEventListener("click", closeExerciseDialog);
 $("cancelBtn").addEventListener("click", closeExerciseDialog);
 $("exerciseForm").addEventListener("submit", saveExerciseFromForm);
 $("deleteBtn").addEventListener("click", deleteCurrentExercise);
 
-$("startRoutineBtn").addEventListener("click", startRoutine);
 $("closePlayerBtn").addEventListener("click", closePlayer);
 $("nextBtn").addEventListener("click", goNext);
 $("prevBtn").addEventListener("click", goPrev);
