@@ -545,30 +545,49 @@ function renderCategoryList() {
   }
 
   list.innerHTML = items.map(ex => {
-    const inToday = state.today.includes(ex.id);
+    const videoId = ex.videoId || getYouTubeId(ex.url);
+    const thumb = videoId
+      ? `<img src="${youtubeThumbUrl(videoId)}" alt="">`
+      : "";
     return `
-      <article class="exercise-card">
-        <div class="card-top">
-          <div>
-            <span class="part-pill">${escapeHtml(ex.part)}</span>
-            <h3>${escapeHtml(ex.name)}</h3>
-            <div class="card-meta">${formatTime(ex.start)} → ${formatTime(ex.end)} ・ ${formatDuration(exerciseDuration(ex))}</div>
-          </div>
-          <button class="icon-btn" data-edit="${ex.id}" aria-label="編集">⋯</button>
+      <article class="exercise-card category-video-card">
+        <div class="yt-thumb">${thumb}</div>
+        <button type="button" class="card-menu-btn" data-menu="${ex.id}" aria-label="メニュー" aria-haspopup="true">…</button>
+        <div class="card-menu" data-menu-panel="${ex.id}">
+          <button type="button" data-edit="${ex.id}">編集</button>
+          <button type="button" class="card-menu-delete" data-delete="${ex.id}">削除</button>
         </div>
-        <p class="card-memo">${escapeHtml(ex.memo || " ")}</p>
-        <div class="card-actions">
-          <button class="primary-btn" data-play="${ex.id}">▶ 再生</button>
-          <button class="secondary-btn" data-today="${ex.id}">${inToday ? "✓ 今日に追加済み" : "＋ 今日に追加"}</button>
-          <button class="danger-btn" data-delete="${ex.id}">削除</button>
-        </div>
+        <h3>${escapeHtml(ex.name)}</h3>
+        <div class="card-meta">${formatTime(ex.start)} → ${formatTime(ex.end)} ・ ${formatDuration(exerciseDuration(ex))}</div>
+        <button type="button" class="primary-btn" data-play="${ex.id}">▶ 再生</button>
       </article>`;
   }).join("");
 
+  list.querySelectorAll(".yt-thumb img").forEach(img => {
+    img.addEventListener("error", () => { img.hidden = true; });
+  });
   list.querySelectorAll("[data-play]").forEach(btn => btn.addEventListener("click", () => playSingle(btn.dataset.play)));
-  list.querySelectorAll("[data-edit]").forEach(btn => btn.addEventListener("click", () => openEditDialog(btn.dataset.edit)));
-  list.querySelectorAll("[data-today]").forEach(btn => btn.addEventListener("click", () => toggleToday(btn.dataset.today)));
-  list.querySelectorAll("[data-delete]").forEach(btn => btn.addEventListener("click", () => deleteExerciseById(btn.dataset.delete)));
+  list.querySelectorAll("[data-edit]").forEach(btn => btn.addEventListener("click", () => {
+    closeCategoryMenus();
+    openEditDialog(btn.dataset.edit);
+  }));
+  list.querySelectorAll("[data-delete]").forEach(btn => btn.addEventListener("click", () => {
+    closeCategoryMenus();
+    if (!confirm("この動画を削除しますか？")) return;
+    removeExercise(btn.dataset.delete);
+  }));
+  list.querySelectorAll("[data-menu]").forEach(btn => {
+    btn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const menu = list.querySelector(`[data-menu-panel="${btn.dataset.menu}"]`);
+      const willOpen = !menu.classList.contains("open");
+      closeCategoryMenus();
+      if (willOpen) menu.classList.add("open");
+    });
+  });
+  list.querySelectorAll(".card-menu").forEach(menu => {
+    menu.addEventListener("click", (event) => event.stopPropagation());
+  });
 }
 
 function openCategory(id) {
@@ -680,15 +699,29 @@ function saveExerciseFromForm(event) {
   renderAll();
 }
 
-function deleteExerciseById(id) {
-  const ex = state.exercises.find(x => x.id === id);
-  if (!ex) return;
-  if (!confirm(`「${ex.name}」を削除しますか？`)) return;
+function removeExercise(id) {
   state.exercises = state.exercises.filter(x => x.id !== id);
   state.today = state.today.filter(x => x !== id);
   saveState();
   closeExerciseDialog();
   renderAll();
+}
+
+function deleteExerciseById(id) {
+  const ex = state.exercises.find(x => x.id === id);
+  if (!ex) return;
+  if (!confirm(`「${ex.name}」を削除しますか？`)) return;
+  removeExercise(id);
+}
+
+function closeCategoryMenus() {
+  document.querySelectorAll("#categoryList .card-menu.open").forEach(menu => {
+    menu.classList.remove("open");
+  });
+}
+
+function youtubeThumbUrl(videoId) {
+  return `https://i.ytimg.com/vi/${encodeURIComponent(videoId)}/hqdefault.jpg`;
 }
 
 function deleteCurrentExercise() {
@@ -869,6 +902,10 @@ document.querySelectorAll("[data-photo-edit]").forEach(btn => {
 
 $("categoryBackBtn").addEventListener("click", closeCategory);
 $("categoryAddBtn").addEventListener("click", () => openAddDialog(state.categoryId));
+document.addEventListener("click", () => closeCategoryMenus());
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") closeCategoryMenus();
+});
 
 document.querySelectorAll("[data-board]").forEach(card => {
   card.addEventListener("click", () => openBoardDialog(card.dataset.board));
