@@ -486,9 +486,11 @@ a.primary-btn {
 }
 .category-video-card .category-play-btn {
   width: auto;
+  max-width: 100%;
   margin: 0;
   padding: 6px 12px;
   font-size: 13px;
+  white-space: nowrap;
 }
 .card-menu-btn {
   position: absolute;
@@ -562,10 +564,11 @@ a.primary-btn {
 .library-video-card .library-play-btn {
   width: auto;
   min-width: 100px;
-  max-width: 140px;
+  max-width: 100%;
   margin: 0;
   padding: 6px 12px;
   font-size: 13px;
+  white-space: nowrap;
 }
 #libraryList.card-grid { gap: 8px; }
 .category-pager {

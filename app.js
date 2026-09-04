@@ -1199,7 +1199,7 @@ async function saveExerciseFromForm(event) {
   if (!name) error = "名前を入力してください。";
   else if (!platform) error = "YouTubeまたはInstagramのURLを確認してください。";
 
-  let item = { id, name, part, url, platform, memo };
+  let item = { id, name, part, url, platform };
   if (platform === "youtube") {
     const videoId = getYouTubeId(url);
     const start = parseTime($("startInput").value);
@@ -1207,7 +1207,7 @@ async function saveExerciseFromForm(event) {
     if (!videoId) error = "YouTubeのURLを確認してください。";
     else if (!Number.isFinite(start) || start < 0) error = "開始時間を確認してください。";
     else if (!Number.isFinite(end) || end <= start) error = "終了時間は開始時間より後にしてください。";
-    item = { ...item, videoId, start: Math.round(start), end: Math.round(end) };
+    item = { ...item, videoId, start: Math.round(start), end: Math.round(end), memo };
   }
 
   if (error) {
