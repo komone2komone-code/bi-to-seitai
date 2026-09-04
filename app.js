@@ -10,6 +10,7 @@ const state = {
   filter: "すべて",
   view: "home",
   categoryId: null,
+  categoryPage: 1,
   player: null,
   queue: [],
   queueIndex: 0,
@@ -532,6 +533,8 @@ function renderLibrary() {
   document.querySelectorAll("#libraryList [data-today]").forEach(btn => btn.addEventListener("click", () => toggleToday(btn.dataset.today)));
 }
 
+const CATEGORY_PAGE_SIZE = 10;
+
 function renderCategoryList() {
   if (state.view !== "category" || !state.categoryId) return;
   const items = state.exercises.filter(ex => ex.categoryId === state.categoryId);
@@ -544,7 +547,13 @@ function renderCategoryList() {
     return;
   }
 
-  list.innerHTML = items.map(ex => {
+  const totalPages = Math.max(1, Math.ceil(items.length / CATEGORY_PAGE_SIZE));
+  if (state.categoryPage > totalPages) state.categoryPage = totalPages;
+  if (state.categoryPage < 1) state.categoryPage = 1;
+  const start = (state.categoryPage - 1) * CATEGORY_PAGE_SIZE;
+  const pageItems = items.slice(start, start + CATEGORY_PAGE_SIZE);
+
+  const cards = pageItems.map(ex => {
     const videoId = ex.videoId || getYouTubeId(ex.url);
     const thumb = videoId
       ? `<img src="${youtubeThumbUrl(videoId)}" alt="">`
@@ -552,16 +561,27 @@ function renderCategoryList() {
     return `
       <article class="exercise-card category-video-card">
         <div class="yt-thumb">${thumb}</div>
+        <div class="category-video-body">
+          <h3>${escapeHtml(ex.name)}</h3>
+          <div class="card-meta">${formatTime(ex.start)} → ${formatTime(ex.end)} ・ ${formatDuration(exerciseDuration(ex))}</div>
+          <button type="button" class="primary-btn category-play-btn" data-play="${ex.id}">▶ 再生</button>
+        </div>
         <button type="button" class="card-menu-btn" data-menu="${ex.id}" aria-label="メニュー" aria-haspopup="true">…</button>
         <div class="card-menu" data-menu-panel="${ex.id}">
           <button type="button" data-edit="${ex.id}">編集</button>
           <button type="button" class="card-menu-delete" data-delete="${ex.id}">削除</button>
         </div>
-        <h3>${escapeHtml(ex.name)}</h3>
-        <div class="card-meta">${formatTime(ex.start)} → ${formatTime(ex.end)} ・ ${formatDuration(exerciseDuration(ex))}</div>
-        <button type="button" class="primary-btn" data-play="${ex.id}">▶ 再生</button>
       </article>`;
   }).join("");
+
+  const pager = totalPages > 1 ? `
+    <div class="category-pager">
+      <button type="button" class="ghost-btn" data-page-prev ${state.categoryPage <= 1 ? "disabled" : ""}>← 前へ</button>
+      <span class="category-page-status">${state.categoryPage} / ${totalPages}</span>
+      <button type="button" class="ghost-btn" data-page-next ${state.categoryPage >= totalPages ? "disabled" : ""}>次へ →</button>
+    </div>` : "";
+
+  list.innerHTML = cards + pager;
 
   list.querySelectorAll(".yt-thumb img").forEach(img => {
     img.addEventListener("error", () => { img.hidden = true; });
@@ -588,12 +608,23 @@ function renderCategoryList() {
   list.querySelectorAll(".card-menu").forEach(menu => {
     menu.addEventListener("click", (event) => event.stopPropagation());
   });
+  list.querySelector("[data-page-prev]")?.addEventListener("click", () => {
+    state.categoryPage -= 1;
+    renderCategoryList();
+    window.scrollTo(0, 0);
+  });
+  list.querySelector("[data-page-next]")?.addEventListener("click", () => {
+    state.categoryPage += 1;
+    renderCategoryList();
+    window.scrollTo(0, 0);
+  });
 }
 
 function openCategory(id) {
   if (!CATEGORIES[id]) return;
   state.view = "category";
   state.categoryId = id;
+  state.categoryPage = 1;
   $("homeView").classList.add("hidden");
   $("categoryView").classList.remove("hidden");
   $("categoryKicker").textContent = CATEGORIES[id].group;

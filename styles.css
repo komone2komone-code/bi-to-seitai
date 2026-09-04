@@ -275,13 +275,17 @@ button:disabled { cursor: default; opacity: .45; }
 
 .exercise-card.category-video-card {
   position: relative;
-  padding: 12px;
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr);
+  gap: 8px 10px;
+  align-items: center;
+  padding: 8px;
   overflow: visible;
 }
 .yt-thumb {
-  position: relative;
+  width: 104px;
   aspect-ratio: 16 / 9;
-  border-radius: 14px;
+  border-radius: 10px;
   overflow: hidden;
   background: linear-gradient(165deg, #F8F3EC, #F3E0E2 52%, #E6EBE2);
 }
@@ -294,37 +298,48 @@ button:disabled { cursor: default; opacity: .45; }
 .yt-thumb img[hidden] {
   display: none !important;
 }
+.category-video-body {
+  min-width: 0;
+  padding-right: 34px;
+}
 .exercise-card.category-video-card h3 {
-  margin: 12px 0 4px;
-  font-size: 18px;
+  margin: 0 0 2px;
+  font-size: 15px;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .category-video-card .card-meta {
-  margin-bottom: 2px;
+  margin: 0 0 6px;
+  font-size: 12px;
 }
-.category-video-card .primary-btn {
-  width: 100%;
-  margin-top: 12px;
+.category-video-card .category-play-btn {
+  width: auto;
+  margin: 0;
+  padding: 6px 12px;
+  font-size: 13px;
 }
 .card-menu-btn {
   position: absolute;
-  top: 18px;
-  right: 18px;
+  top: 6px;
+  right: 6px;
   z-index: 2;
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   border: 1px solid rgba(232, 221, 214, .9);
   background: rgba(255, 252, 250, .92);
   color: var(--ink);
-  font-size: 20px;
+  font-size: 18px;
   line-height: 1;
   padding: 0;
 }
 .card-menu {
   display: none;
   position: absolute;
-  top: 62px;
-  right: 16px;
+  top: 42px;
+  right: 8px;
   z-index: 3;
   min-width: 148px;
   padding: 6px;
@@ -348,6 +363,27 @@ button:disabled { cursor: default; opacity: .45; }
 }
 .card-menu button:active { background: var(--soft); }
 .card-menu-delete { color: var(--danger); }
+#categoryList.card-grid { gap: 8px; }
+.category-pager {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 4px 0 8px;
+}
+.category-pager .ghost-btn {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+.category-pager [data-page-prev] { justify-self: start; }
+.category-pager [data-page-next] { justify-self: end; }
+.category-page-status {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  white-space: nowrap;
+}
 
 .hero {
   display: flex; align-items: center; justify-content: space-between; gap: 24px;
