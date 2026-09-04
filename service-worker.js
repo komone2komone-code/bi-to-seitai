@@ -1,4 +1,4 @@
-const CACHE_NAME = "bi-to-seitai-v7";
+const CACHE_NAME = "bi-to-seitai-v8";
 const PRECACHE = [
   "./",
   "./index.html",

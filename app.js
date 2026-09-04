@@ -68,7 +68,7 @@ function isProductGroup(group) {
   return HOME_PRODUCT_GROUPS.includes(group) || !!SUPP_GROUPS[group];
 }
 
-const parts = ["すべて", "首", "肩・背中", "腰", "股関節", "脚", "全身", "その他"];
+const parts = ["すべて", "顔", "首", "肩・背中", "足つぼ", "腰", "股関節", "脚", "全身", "その他"];
 
 const CATEGORIES = {
   "minutes-5": { group: "Minutes整体", name: "5分" },
