@@ -270,6 +270,15 @@ function loadState() {
     state.needProductMigration = true;
     state.needSuppMigration = true;
   }
+  migrateSuppCardNames();
+}
+
+function migrateSuppCardNames() {
+  const prevMama = state.suppNames.mama;
+  const prevYuri = state.suppNames.yuri;
+  if (!state.suppNames.mama || state.suppNames.mama === "ママ") state.suppNames.mama = "サプリ";
+  if (!state.suppNames.yuri || state.suppNames.yuri === "ゆり") state.suppNames.yuri = "漢方";
+  if (state.suppNames.mama !== prevMama || state.suppNames.yuri !== prevYuri) saveState();
 }
 
 function saveState() {
