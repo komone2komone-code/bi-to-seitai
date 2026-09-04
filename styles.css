@@ -364,6 +364,40 @@ button:disabled { cursor: default; opacity: .45; }
 .card-menu button:active { background: var(--soft); }
 .card-menu-delete { color: var(--danger); }
 #categoryList.card-grid { gap: 8px; }
+.exercise-card.library-video-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr);
+  gap: 8px 10px;
+  align-items: center;
+  padding: 8px;
+  overflow: visible;
+}
+.library-video-body {
+  min-width: 0;
+  padding-right: 34px;
+}
+.exercise-card.library-video-card h3 {
+  margin: 0 0 2px;
+  font-size: 15px;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.library-video-card .card-meta {
+  margin: 0 0 6px;
+  font-size: 12px;
+}
+.library-video-card .library-play-btn {
+  width: auto;
+  min-width: 100px;
+  max-width: 140px;
+  margin: 0;
+  padding: 6px 12px;
+  font-size: 13px;
+}
+#libraryList.card-grid { gap: 8px; }
 .category-pager {
   display: grid;
   grid-template-columns: 1fr auto 1fr;

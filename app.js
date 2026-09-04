@@ -447,35 +447,62 @@ function renderFilters() {
 
 function renderLibrary() {
   const items = state.exercises.filter(ex => state.filter === "すべて" || ex.part === state.filter);
+  const list = $("libraryList");
 
   if (!items.length) {
-    $("libraryList").innerHTML = `
+    list.innerHTML = `
       <div class="empty-state" style="grid-column:1/-1">
         <p>${state.exercises.length ? "この部位の登録はまだありません。" : "まだ整体が登録されていません。写真カードから「＋ 追加」で登録できます。"}</p>
       </div>`;
     return;
   }
 
-  $("libraryList").innerHTML = items.map(ex => {
+  list.innerHTML = items.map(ex => {
+    const videoId = ex.videoId || getYouTubeId(ex.url);
+    const thumb = videoId
+      ? `<img src="${youtubeThumbUrl(videoId)}" alt="">`
+      : "";
     return `
-      <article class="exercise-card">
-        <div class="card-top">
-          <div>
-            <span class="part-pill">${escapeHtml(ex.part)}</span>
-            <h3>${escapeHtml(ex.name)}</h3>
-            <div class="card-meta">${formatTime(ex.start)} → ${formatTime(ex.end)} ・ ${formatDuration(exerciseDuration(ex))}</div>
-          </div>
-          <button class="icon-btn" data-edit="${ex.id}" aria-label="編集">⋯</button>
+      <article class="exercise-card library-video-card">
+        <div class="yt-thumb">${thumb}</div>
+        <div class="library-video-body">
+          <h3>${escapeHtml(ex.name)}</h3>
+          <div class="card-meta">${formatTime(ex.start)} → ${formatTime(ex.end)} ・ ${formatDuration(exerciseDuration(ex))}</div>
+          <button type="button" class="primary-btn library-play-btn" data-play="${ex.id}">▶ 再生</button>
         </div>
-        <p class="card-memo">${escapeHtml(ex.memo || " ")}</p>
-        <div class="card-actions">
-          <button class="primary-btn" data-play="${ex.id}">▶ 再生</button>
+        <button type="button" class="card-menu-btn" data-menu="${ex.id}" aria-label="メニュー" aria-haspopup="true">…</button>
+        <div class="card-menu" data-menu-panel="${ex.id}">
+          <button type="button" data-edit="${ex.id}">編集</button>
+          <button type="button" class="card-menu-delete" data-delete="${ex.id}">削除</button>
         </div>
       </article>`;
   }).join("");
 
-  document.querySelectorAll("#libraryList [data-play]").forEach(btn => btn.addEventListener("click", () => playSingle(btn.dataset.play)));
-  document.querySelectorAll("#libraryList [data-edit]").forEach(btn => btn.addEventListener("click", () => openEditDialog(btn.dataset.edit)));
+  list.querySelectorAll(".yt-thumb img").forEach(img => {
+    img.addEventListener("error", () => { img.hidden = true; });
+  });
+  list.querySelectorAll("[data-play]").forEach(btn => btn.addEventListener("click", () => playSingle(btn.dataset.play)));
+  list.querySelectorAll("[data-edit]").forEach(btn => btn.addEventListener("click", () => {
+    closeCategoryMenus();
+    openEditDialog(btn.dataset.edit);
+  }));
+  list.querySelectorAll("[data-delete]").forEach(btn => btn.addEventListener("click", () => {
+    closeCategoryMenus();
+    if (!confirm("この動画を削除しますか？")) return;
+    removeExercise(btn.dataset.delete);
+  }));
+  list.querySelectorAll("[data-menu]").forEach(btn => {
+    btn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const menu = list.querySelector(`[data-menu-panel="${btn.dataset.menu}"]`);
+      const willOpen = !menu.classList.contains("open");
+      closeCategoryMenus();
+      if (willOpen) menu.classList.add("open");
+    });
+  });
+  list.querySelectorAll(".card-menu").forEach(menu => {
+    menu.addEventListener("click", (event) => event.stopPropagation());
+  });
 }
 
 const CATEGORY_PAGE_SIZE = 10;
@@ -678,7 +705,7 @@ function deleteExerciseById(id) {
 }
 
 function closeCategoryMenus() {
-  document.querySelectorAll("#categoryList .card-menu.open").forEach(menu => {
+  document.querySelectorAll(".card-menu.open").forEach(menu => {
     menu.classList.remove("open");
   });
 }
