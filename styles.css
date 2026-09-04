@@ -79,6 +79,7 @@ button:disabled { cursor: default; opacity: .45; }
   min-width: 0;
 }
 .photo-card {
+  position: relative;
   display: grid;
   gap: 3px;
   padding: 0;
@@ -88,6 +89,9 @@ button:disabled { cursor: default; opacity: .45; }
   text-align: center;
   min-width: 0;
   cursor: pointer;
+}
+.photo-card.menu-open {
+  z-index: 5;
 }
 .photo-frame {
   position: relative;
@@ -137,7 +141,7 @@ button:disabled { cursor: default; opacity: .45; }
   right: 0;
   bottom: 0;
   z-index: 1;
-  padding: 10px 34px 6px 8px;
+  padding: 10px 8px 6px;
   font-size: 12px;
   font-weight: 800;
   letter-spacing: .04em;
@@ -147,20 +151,20 @@ button:disabled { cursor: default; opacity: .45; }
   background: linear-gradient(transparent, rgba(40, 24, 22, .42));
   pointer-events: none;
 }
-.photo-edit-btn {
-  position: absolute;
+.photo-card .photo-card-menu-btn {
+  top: 4px;
   right: 4px;
-  bottom: 4px;
-  z-index: 2;
-  border: 1px solid rgba(232, 221, 214, .85);
-  border-radius: 999px;
-  padding: 2px 6px;
-  font-size: 9px;
-  font-weight: 700;
-  line-height: 1.2;
-  background: rgba(255, 252, 250, .82);
-  color: var(--muted);
-  box-shadow: none;
+  width: 24px;
+  height: 24px;
+  font-size: 14px;
+  border-color: transparent;
+  background: rgba(255, 252, 247, .72);
+  box-shadow: 0 1px 4px rgba(61, 46, 38, .14);
+}
+.photo-card > .card-menu {
+  top: 30px;
+  right: 2px;
+  min-width: 132px;
 }
 
 .photo-row-2 {

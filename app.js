@@ -9,6 +9,8 @@ const state = {
   products: { cosmetics: [], bath: [] },
   productsReady: false,
   needProductMigration: false,
+  categoryNames: {},
+  hiddenCategoryIds: [],
   filter: "すべて",
   view: "home",
   categoryId: null,
@@ -21,6 +23,7 @@ const state = {
 };
 
 let pendingPhotoId = null;
+let pendingRenameId = null;
 let pendingBoardId = null;
 let currentBoardId = null;
 let selectedBoardId = null;
@@ -59,6 +62,13 @@ const CATEGORIES = {
   "beauty-hair": { group: "女神・お出かけ前", name: "髪型" },
   "beauty-makeup": { group: "女神・お出かけ前", name: "メイク" },
   "beauty-yuri": { group: "女神・お出かけ前", name: "ゆりに施す" }
+};
+
+const CARD_SHORT_LABELS = {
+  "minutes-5": "５分",
+  "minutes-10": "１０分",
+  "minutes-15": "１５分",
+  "minutes-solid": "しっかり"
 };
 
 const $ = (id) => document.getElementById(id);
@@ -117,12 +127,61 @@ function normalizeProducts(raw) {
   };
 }
 
+function normalizeCategoryNames(obj) {
+  const out = {};
+  if (!obj || typeof obj !== "object" || Array.isArray(obj)) return out;
+  Object.entries(obj).forEach(([id, name]) => {
+    if (!CATEGORIES[id]) return;
+    const text = String(name ?? "").trim().slice(0, 40);
+    if (text) out[id] = text;
+  });
+  return out;
+}
+
+function normalizeHiddenCategoryIds(list) {
+  if (!Array.isArray(list)) return [];
+  return [...new Set(list.map(id => String(id)).filter(id => CATEGORIES[id]))];
+}
+
+function getCardLabel(id) {
+  if (state.categoryNames[id]) return state.categoryNames[id];
+  return CARD_SHORT_LABELS[id] || CATEGORIES[id]?.name || "";
+}
+
+function getCategoryName(id) {
+  return state.categoryNames[id] || CATEGORIES[id]?.name || "";
+}
+
+function applyCategoryLabels() {
+  document.querySelectorAll(".photo-card[data-card]").forEach(card => {
+    const id = card.dataset.card;
+    const hidden = state.hiddenCategoryIds.includes(id);
+    card.classList.toggle("hidden", hidden);
+    if (hidden) {
+      card.classList.remove("menu-open");
+      return;
+    }
+    const text = getCardLabel(id);
+    const overlay = card.querySelector(".photo-overlay");
+    const label = card.querySelector(".photo-label");
+    if (overlay) overlay.textContent = text;
+    if (label) label.textContent = text;
+  });
+  document.querySelectorAll("#homeView .home-block").forEach(block => {
+    const cards = [...block.querySelectorAll(".photo-card[data-card]")];
+    if (!cards.length) return;
+    block.classList.toggle("hidden", cards.every(card => card.classList.contains("hidden")));
+  });
+}
+
 function loadState() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
     state.exercises = Array.isArray(saved.exercises) ? saved.exercises : [];
     state.habits = normalizeHabits(saved.habits);
     state.imageFits = normalizeImageFits(saved.imageFits);
+    state.categoryNames = normalizeCategoryNames(saved.categoryNames);
+    state.hiddenCategoryIds = normalizeHiddenCategoryIds(saved.hiddenCategoryIds);
     const products = normalizeProducts(saved.products);
     if (products) {
       state.products = products;
@@ -137,6 +196,8 @@ function loadState() {
     state.exercises = [];
     state.habits = normalizeHabits([]);
     state.imageFits = {};
+    state.categoryNames = {};
+    state.hiddenCategoryIds = [];
     state.products = { cosmetics: [], bath: [] };
     state.productsReady = false;
     state.needProductMigration = true;
@@ -149,6 +210,8 @@ function saveState() {
     exercises: state.exercises,
     habits: state.habits,
     imageFits: state.imageFits,
+    categoryNames: state.categoryNames,
+    hiddenCategoryIds: state.hiddenCategoryIds,
     savedAt: new Date().toISOString()
   };
   if (state.productsReady) data.products = state.products;
@@ -826,14 +889,14 @@ function renderCategoryList() {
 }
 
 function openCategory(id) {
-  if (!CATEGORIES[id]) return;
+  if (!CATEGORIES[id] || state.hiddenCategoryIds.includes(id)) return;
   state.view = "category";
   state.categoryId = id;
   state.categoryPage = 1;
   $("homeView").classList.add("hidden");
   $("categoryView").classList.remove("hidden");
   $("categoryKicker").textContent = CATEGORIES[id].group;
-  $("categoryTitle").textContent = CATEGORIES[id].name;
+  $("categoryTitle").textContent = getCategoryName(id);
   renderCategoryList();
   window.scrollTo(0, 0);
 }
@@ -846,6 +909,7 @@ function closeCategory() {
 }
 
 function renderAll() {
+  applyCategoryLabels();
   renderFilters();
   renderLibrary();
   renderHabits();
@@ -942,6 +1006,100 @@ function closeCategoryMenus() {
   document.querySelectorAll(".card-menu.open").forEach(menu => {
     menu.classList.remove("open");
   });
+  document.querySelectorAll(".photo-card.menu-open").forEach(card => {
+    card.classList.remove("menu-open");
+  });
+}
+
+function ensurePhotoCardMenus() {
+  document.querySelectorAll(".photo-card[data-card]").forEach(card => {
+    if (card.querySelector(".photo-card-menu-btn")) return;
+    const frame = card.querySelector(".photo-frame");
+    if (!frame) return;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "card-menu-btn photo-card-menu-btn";
+    btn.setAttribute("aria-label", "メニュー");
+    btn.setAttribute("aria-haspopup", "true");
+    btn.textContent = "…";
+    const panel = document.createElement("div");
+    panel.className = "card-menu";
+    panel.innerHTML = `
+      <button type="button" data-photo-action="rename">名前の変更</button>
+      <button type="button" data-photo-action="photo">写真の変更</button>
+      <button type="button" class="card-menu-delete" data-photo-action="delete">削除</button>
+    `;
+    btn.addEventListener("click", event => {
+      event.preventDefault();
+      event.stopPropagation();
+      const willOpen = !panel.classList.contains("open");
+      closeCategoryMenus();
+      if (willOpen) {
+        panel.classList.add("open");
+        card.classList.add("menu-open");
+      }
+    });
+    panel.addEventListener("click", event => event.stopPropagation());
+    panel.querySelectorAll("[data-photo-action]").forEach(actionBtn => {
+      actionBtn.addEventListener("click", event => {
+        event.preventDefault();
+        event.stopPropagation();
+        const id = card.dataset.card;
+        const action = actionBtn.dataset.photoAction;
+        closeCategoryMenus();
+        if (action === "rename") openCategoryRename(id);
+        if (action === "photo") {
+          pendingPhotoId = id;
+          pendingBoardId = null;
+          pendingProductPick = false;
+          $("photoInput").click();
+        }
+        if (action === "delete") deletePhotoCard(id);
+      });
+    });
+    frame.appendChild(btn);
+    card.appendChild(panel);
+  });
+}
+
+function openCategoryRename(id) {
+  if (!CATEGORIES[id] || state.hiddenCategoryIds.includes(id)) return;
+  pendingRenameId = id;
+  $("categoryRenameInput").value = getCardLabel(id);
+  $("categoryRenameDialog").showModal();
+  $("categoryRenameInput").focus();
+  $("categoryRenameInput").select();
+}
+
+function closeCategoryRename() {
+  pendingRenameId = null;
+  if ($("categoryRenameDialog").open) $("categoryRenameDialog").close();
+}
+
+function saveCategoryRename() {
+  const id = pendingRenameId;
+  if (!CATEGORIES[id]) return;
+  const name = $("categoryRenameInput").value.trim().slice(0, 40);
+  if (!name) return;
+  state.categoryNames[id] = name;
+  saveState();
+  closeCategoryRename();
+  applyCategoryLabels();
+  if (state.view === "category" && state.categoryId === id) {
+    $("categoryTitle").textContent = getCategoryName(id);
+  }
+}
+
+function deletePhotoCard(id) {
+  if (!CATEGORIES[id] || state.hiddenCategoryIds.includes(id)) return;
+  const hasVideos = state.exercises.some(item => item.categoryId === id);
+  const message = hasVideos
+    ? "この項目を削除しますか？\n登録されている動画は『すべての動画』に残ります。"
+    : "この項目を削除しますか？";
+  if (!confirm(message)) return;
+  state.hiddenCategoryIds.push(id);
+  saveState();
+  applyCategoryLabels();
 }
 
 function youtubeThumbUrl(videoId) {
@@ -1039,6 +1197,8 @@ async function exportBackup() {
     exercises: state.exercises,
     habits: state.habits,
     imageFits: state.imageFits,
+    categoryNames: state.categoryNames,
+    hiddenCategoryIds: state.hiddenCategoryIds,
     products: state.products,
     cardImages
   };
@@ -1066,6 +1226,8 @@ async function importBackup(file) {
     if (data.imageFits && typeof data.imageFits === "object") {
       state.imageFits = normalizeImageFits(data.imageFits);
     }
+    state.categoryNames = normalizeCategoryNames(data.categoryNames);
+    state.hiddenCategoryIds = normalizeHiddenCategoryIds(data.hiddenCategoryIds);
     const importedProducts = normalizeProducts(data.products);
     if (importedProducts) {
       state.products = importedProducts;
@@ -1110,17 +1272,10 @@ $("importInput").addEventListener("change", (e) => {
   e.target.value = "";
 });
 
-document.querySelectorAll("[data-card]").forEach(card => {
-  card.addEventListener("click", () => openCategory(card.dataset.card));
-});
-
-document.querySelectorAll("[data-photo-edit]").forEach(btn => {
-  btn.addEventListener("click", (event) => {
-    event.stopPropagation();
-    pendingPhotoId = btn.dataset.photoEdit;
-    pendingBoardId = null;
-    pendingProductPick = false;
-    $("photoInput").click();
+document.querySelectorAll(".photo-card[data-card]").forEach(card => {
+  card.addEventListener("click", event => {
+    if (event.target.closest(".photo-card-menu-btn, .card-menu")) return;
+    openCategory(card.dataset.card);
   });
 });
 
@@ -1293,7 +1448,20 @@ $("productPasteBtn").addEventListener("click", async () => {
   }
 });
 
+$("cancelCategoryRenameBtn").addEventListener("click", closeCategoryRename);
+$("saveCategoryRenameBtn").addEventListener("click", saveCategoryRename);
+$("categoryRenameDialog").addEventListener("close", () => {
+  pendingRenameId = null;
+});
+$("categoryRenameInput").addEventListener("keydown", event => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    saveCategoryRename();
+  }
+});
+
 loadState();
+ensurePhotoCardMenus();
 renderAll();
 loadHomeImages();
 migrateCareProductsIfNeeded().then(() => {
