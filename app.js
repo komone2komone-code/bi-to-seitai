@@ -6,6 +6,9 @@ const state = {
   exercises: [],
   habits: ["", "", "", "", "", "", "", ""],
   imageFits: {},
+  products: { cosmetics: [], bath: [] },
+  productsReady: false,
+  needProductMigration: false,
   filter: "すべて",
   view: "home",
   categoryId: null,
@@ -23,6 +26,19 @@ let currentBoardId = null;
 let selectedBoardId = null;
 let imageDb = null;
 let boardDrag = null;
+let pendingProductPick = false;
+let pendingProductDataUrl = "";
+let productEditGroup = null;
+let productEditId = null;
+
+const PRODUCT_LISTS = {
+  cosmetics: "cosmeticsList",
+  bath: "bathList"
+};
+const LEGACY_PRODUCT_IDS = {
+  cosmetics: "care-cosmetics",
+  bath: "care-bath"
+};
 
 const parts = ["すべて", "首", "肩・背中", "腰", "股関節", "脚", "全身", "その他"];
 
@@ -85,27 +101,58 @@ function getFit(id) {
   return state.imageFits[id];
 }
 
+function normalizeProducts(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  if (!Array.isArray(raw.cosmetics) || !Array.isArray(raw.bath)) return null;
+  const cleanItem = (item) => {
+    if (!item || typeof item !== "object" || !item.id) return null;
+    return {
+      id: String(item.id),
+      name: String(item.name ?? "").trim() || "名称未設定"
+    };
+  };
+  return {
+    cosmetics: raw.cosmetics.map(cleanItem).filter(Boolean),
+    bath: raw.bath.map(cleanItem).filter(Boolean)
+  };
+}
+
 function loadState() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
     state.exercises = Array.isArray(saved.exercises) ? saved.exercises : [];
     state.habits = normalizeHabits(saved.habits);
     state.imageFits = normalizeImageFits(saved.imageFits);
+    const products = normalizeProducts(saved.products);
+    if (products) {
+      state.products = products;
+      state.productsReady = true;
+      state.needProductMigration = false;
+    } else {
+      state.products = { cosmetics: [], bath: [] };
+      state.productsReady = false;
+      state.needProductMigration = true;
+    }
   } catch {
     state.exercises = [];
     state.habits = normalizeHabits([]);
     state.imageFits = {};
+    state.products = { cosmetics: [], bath: [] };
+    state.productsReady = false;
+    state.needProductMigration = true;
   }
 }
 
 function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+  const data = {
     version: 1,
     exercises: state.exercises,
     habits: state.habits,
     imageFits: state.imageFits,
     savedAt: new Date().toISOString()
-  }));
+  };
+  if (state.productsReady) data.products = state.products;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
 function openImageDb() {
@@ -240,10 +287,196 @@ async function loadHomeImages() {
     document.querySelectorAll("[data-board]").forEach(card => {
       applyBoardImage(card.dataset.board, images[card.dataset.board] || "");
     });
+    applyProductImages(images);
   } catch {
     document.querySelectorAll("[data-card]").forEach(card => applyCardImage(card.dataset.card, ""));
     document.querySelectorAll("[data-board]").forEach(card => applyBoardImage(card.dataset.board, ""));
+    applyProductImages({});
   }
+}
+
+async function migrateCareProductsIfNeeded() {
+  if (!state.needProductMigration) {
+    state.productsReady = true;
+    return;
+  }
+  let images = {};
+  try {
+    images = await getAllCardImages();
+  } catch {}
+  Object.entries(LEGACY_PRODUCT_IDS).forEach(([group, id]) => {
+    if (images[id] && !state.products[group].some(item => item.id === id)) {
+      state.products[group].push({ id, name: "名称未設定" });
+    }
+  });
+  state.needProductMigration = false;
+  state.productsReady = true;
+  saveState();
+}
+
+function applyProductImage(id, dataUrl) {
+  const card = document.querySelector(`[data-product-id="${id}"]`);
+  if (!card) return;
+  const img = card.querySelector("img");
+  if (dataUrl) {
+    img.src = dataUrl;
+    img.hidden = false;
+  } else {
+    img.removeAttribute("src");
+    img.hidden = true;
+  }
+}
+
+function applyProductImages(images) {
+  const items = [...state.products.cosmetics, ...state.products.bath];
+  items.forEach(item => applyProductImage(item.id, images[item.id] || ""));
+}
+
+function renderProducts() {
+  renderProductGroup("cosmetics");
+  renderProductGroup("bath");
+  getAllCardImages().then(applyProductImages).catch(() => applyProductImages({}));
+}
+
+function renderProductGroup(group) {
+  const list = $(PRODUCT_LISTS[group]);
+  if (!list) return;
+  const items = state.products[group] || [];
+  if (!items.length) {
+    list.innerHTML = `<p class="product-empty">まだ商品がありません。「＋追加」から登録できます。</p>`;
+    return;
+  }
+  list.innerHTML = items.map(item => `
+    <article class="product-card" data-product-id="${item.id}" data-product-group="${group}">
+      <div class="product-thumb"><img alt="" hidden /></div>
+      <span class="product-name">${escapeHtml(item.name)}</span>
+      <button type="button" class="card-menu-btn" data-product-menu="${item.id}" aria-label="メニュー">…</button>
+      <div class="card-menu" data-product-menu-panel="${item.id}">
+        <button type="button" data-product-edit="${item.id}">編集</button>
+        <button type="button" class="card-menu-delete" data-product-delete="${item.id}">削除</button>
+      </div>
+    </article>
+  `).join("");
+
+  list.querySelectorAll(".product-card").forEach(card => {
+    card.addEventListener("click", () => openProductDialog(card.dataset.productGroup, card.dataset.productId));
+  });
+  list.querySelectorAll("[data-product-menu]").forEach(btn => {
+    btn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const menu = list.querySelector(`[data-product-menu-panel="${btn.dataset.productMenu}"]`);
+      const willOpen = !menu.classList.contains("open");
+      closeCategoryMenus();
+      if (willOpen) menu.classList.add("open");
+    });
+  });
+  list.querySelectorAll(".card-menu").forEach(menu => {
+    menu.addEventListener("click", (event) => event.stopPropagation());
+  });
+  list.querySelectorAll("[data-product-edit]").forEach(btn => {
+    btn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      closeCategoryMenus();
+      openProductDialog(group, btn.dataset.productEdit);
+    });
+  });
+  list.querySelectorAll("[data-product-delete]").forEach(btn => {
+    btn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      closeCategoryMenus();
+      deleteProduct(group, btn.dataset.productDelete);
+    });
+  });
+}
+
+function refreshProductPreview() {
+  const img = $("productPreviewImg");
+  const hint = $("productPreviewHint");
+  if (pendingProductDataUrl) {
+    img.src = pendingProductDataUrl;
+    img.hidden = false;
+    hint.hidden = true;
+  } else {
+    img.removeAttribute("src");
+    img.hidden = true;
+    hint.hidden = false;
+  }
+}
+
+async function openProductDialog(group, id) {
+  productEditGroup = group;
+  productEditId = id || "";
+  pendingProductDataUrl = "";
+  $("productError").textContent = "";
+  $("productNameInput").value = "";
+  if (id) {
+    const item = state.products[group].find(x => x.id === id);
+    if (!item) return;
+    $("productDialogTitle").textContent = "商品を編集";
+    $("productNameInput").value = item.name;
+    $("productDeleteBtn").classList.remove("hidden");
+    try {
+      pendingProductDataUrl = await getCardImage(id);
+    } catch {
+      pendingProductDataUrl = "";
+    }
+  } else {
+    $("productDialogTitle").textContent = "商品を追加";
+    $("productDeleteBtn").classList.add("hidden");
+  }
+  refreshProductPreview();
+  if (!$("productDialog").open) $("productDialog").showModal();
+}
+
+function closeProductDialog() {
+  if ($("productDialog").open) $("productDialog").close();
+  productEditGroup = null;
+  productEditId = "";
+  pendingProductDataUrl = "";
+  pendingProductPick = false;
+}
+
+async function saveProduct() {
+  if (!productEditGroup || !PRODUCT_LISTS[productEditGroup]) return;
+  const name = $("productNameInput").value.trim() || "名称未設定";
+  if (!pendingProductDataUrl) {
+    $("productError").textContent = "商品画像を追加してください。";
+    return;
+  }
+  $("productError").textContent = "";
+  const id = productEditId || `product-${uid()}`;
+  const list = state.products[productEditGroup];
+  const existing = list.findIndex(x => x.id === id);
+  if (existing >= 0) list[existing] = { id, name };
+  else list.push({ id, name });
+  try {
+    await putCardImage(id, pendingProductDataUrl);
+  } catch {
+    $("productError").textContent = "画像を保存できませんでした。";
+    return;
+  }
+  state.productsReady = true;
+  saveState();
+  closeProductDialog();
+  renderProducts();
+}
+
+async function deleteProduct(group, id) {
+  if (!group || !id) return;
+  if (!confirm("この商品を削除しますか？")) return;
+  state.products[group] = state.products[group].filter(item => item.id !== id);
+  try {
+    await deleteCardImage(id);
+  } catch {}
+  state.productsReady = true;
+  saveState();
+  closeProductDialog();
+  renderProducts();
+}
+
+async function setPendingProductFile(file) {
+  pendingProductDataUrl = await readImageDataUrl(file);
+  refreshProductPreview();
 }
 
 function renderHabits() {
@@ -617,6 +850,7 @@ function renderAll() {
   renderLibrary();
   renderHabits();
   renderCategoryList();
+  renderProducts();
 }
 
 function escapeHtml(text) {
@@ -805,6 +1039,7 @@ async function exportBackup() {
     exercises: state.exercises,
     habits: state.habits,
     imageFits: state.imageFits,
+    products: state.products,
     cardImages
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -831,10 +1066,21 @@ async function importBackup(file) {
     if (data.imageFits && typeof data.imageFits === "object") {
       state.imageFits = normalizeImageFits(data.imageFits);
     }
+    const importedProducts = normalizeProducts(data.products);
+    if (importedProducts) {
+      state.products = importedProducts;
+      state.needProductMigration = false;
+      state.productsReady = true;
+    } else {
+      state.products = { cosmetics: [], bath: [] };
+      state.needProductMigration = true;
+      state.productsReady = false;
+    }
     saveState();
     if (data.cardImages && typeof data.cardImages === "object") {
       await replaceCardImages(data.cardImages);
     }
+    await migrateCareProductsIfNeeded();
     renderAll();
     await loadHomeImages();
     $("transferMessage").textContent = `${clean.length}件を読み込みました。`;
@@ -873,6 +1119,7 @@ document.querySelectorAll("[data-photo-edit]").forEach(btn => {
     event.stopPropagation();
     pendingPhotoId = btn.dataset.photoEdit;
     pendingBoardId = null;
+    pendingProductPick = false;
     $("photoInput").click();
   });
 });
@@ -892,12 +1139,16 @@ $("photoInput").addEventListener("change", async (e) => {
   const file = e.target.files?.[0];
   const photoId = pendingPhotoId;
   const boardId = pendingBoardId || currentBoardId;
+  const productPick = pendingProductPick;
   e.target.value = "";
   pendingPhotoId = null;
   pendingBoardId = null;
+  pendingProductPick = false;
   if (!file) return;
   try {
-    if (photoId) {
+    if (productPick) {
+      await setPendingProductFile(file);
+    } else if (photoId) {
       const dataUrl = await readImageDataUrl(file);
       await putCardImage(photoId, dataUrl);
       applyCardImage(photoId, dataUrl);
@@ -925,6 +1176,7 @@ $("boardPasteBtn").addEventListener("click", async () => {
 });
 $("boardPickBtn").addEventListener("click", () => {
   pendingPhotoId = null;
+  pendingProductPick = false;
   pendingBoardId = currentBoardId;
   $("photoInput").click();
 });
@@ -977,8 +1229,17 @@ $("boardPreview").addEventListener("pointerup", endBoardDrag);
 $("boardPreview").addEventListener("pointercancel", endBoardDrag);
 
 document.addEventListener("paste", async (event) => {
-  if (event.target && (event.target.tagName === "INPUT" || event.target.tagName === "TEXTAREA")) return;
   const file = fileFromPasteEvent(event);
+  if ($("productDialog").open && file) {
+    event.preventDefault();
+    try {
+      await setPendingProductFile(file);
+    } catch {
+      $("productError").textContent = "画像を貼り付けできませんでした。";
+    }
+    return;
+  }
+  if (event.target && (event.target.tagName === "INPUT" || event.target.tagName === "TEXTAREA")) return;
   if (!file) return;
   const id = currentBoardId || selectedBoardId;
   if (!id) return;
@@ -1000,6 +1261,41 @@ document.querySelectorAll("[data-habit]").forEach(el => {
   });
 });
 
+document.querySelectorAll("[data-product-add]").forEach(btn => {
+  btn.addEventListener("click", () => openProductDialog(btn.dataset.productAdd, ""));
+});
+$("closeProductBtn").addEventListener("click", closeProductDialog);
+$("productCancelBtn").addEventListener("click", closeProductDialog);
+$("productSaveBtn").addEventListener("click", () => saveProduct());
+$("productDeleteBtn").addEventListener("click", () => deleteProduct(productEditGroup, productEditId));
+$("productPickBtn").addEventListener("click", () => {
+  pendingPhotoId = null;
+  pendingBoardId = null;
+  pendingProductPick = true;
+  $("photoInput").click();
+});
+$("productPasteBtn").addEventListener("click", async () => {
+  $("productError").textContent = "";
+  try {
+    if (navigator.clipboard && navigator.clipboard.read) {
+      const items = await navigator.clipboard.read();
+      for (const item of items) {
+        const type = item.types.find(t => t.startsWith("image/"));
+        if (!type) continue;
+        const blob = await item.getType(type);
+        await setPendingProductFile(blob);
+        return;
+      }
+    }
+    $("productError").textContent = "クリップボードに画像がありません。画像をコピーして貼り付けてください。";
+  } catch {
+    $("productError").textContent = "この環境では貼り付けボタンが使えないので、Ctrl+V か「写真を選択」を使ってください。";
+  }
+});
+
 loadState();
 renderAll();
 loadHomeImages();
+migrateCareProductsIfNeeded().then(() => {
+  renderProducts();
+});

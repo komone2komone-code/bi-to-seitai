@@ -176,23 +176,21 @@
       <section class="home-block">
         <div class="home-head">
           <p class="section-label">CARE</p>
-          <h2>化粧品・バス</h2>
+          <h2>化粧品・バス・ヘアケア</h2>
         </div>
-        <div class="photo-row photo-row-2">
-          <article class="photo-card board-card" data-board="care-cosmetics" tabindex="0">
-            <div class="photo-frame">
-              <img alt="" hidden />
-              <span class="photo-placeholder">＋ 画像を追加<br>貼り付け / 写真を選択</span>
-            </div>
-            <span class="photo-label">化粧品</span>
-          </article>
-          <article class="photo-card board-card" data-board="care-bath" tabindex="0">
-            <div class="photo-frame">
-              <img alt="" hidden />
-              <span class="photo-placeholder">＋ 画像を追加<br>貼り付け / 写真を選択</span>
-            </div>
-            <span class="photo-label">バス・ヘアケア</span>
-          </article>
+        <div class="product-group">
+          <div class="product-group-head">
+            <h3>化粧品</h3>
+            <button type="button" class="secondary-btn product-add-btn" data-product-add="cosmetics">＋追加</button>
+          </div>
+          <div id="cosmeticsList" class="product-grid"></div>
+        </div>
+        <div class="product-group">
+          <div class="product-group-head">
+            <h3>バス・ヘアケア</h3>
+            <button type="button" class="secondary-btn product-add-btn" data-product-add="bath">＋追加</button>
+          </div>
+          <div id="bathList" class="product-grid"></div>
         </div>
       </section>
 
@@ -359,7 +357,7 @@
         <button type="button" id="closeTransferBtn" class="icon-btn" aria-label="閉じる">×</button>
       </div>
       <p class="muted">
-        登録したURL・時間・メモ、ホームの写真、画像カード、「痩せる習慣」の言葉は、この端末のブラウザ内に保存されています。
+        登録したURL・時間・メモ、ホームの写真、化粧品などの商品、「痩せる習慣」の言葉は、この端末のブラウザ内に保存されています。
         機種変更やブラウザ変更の前にバックアップを書き出してください。
       </p>
       <div class="transfer-actions">
@@ -399,6 +397,37 @@
         <button type="button" id="boardDeleteBtn" class="danger-btn">削除</button>
       </div>
       <p id="boardMessage" class="status" aria-live="polite"></p>
+    </div>
+  </dialog>
+
+  <dialog id="productDialog" class="dialog">
+    <div class="dialog-card">
+      <div class="dialog-head">
+        <div>
+          <p class="section-label">ITEM</p>
+          <h2 id="productDialogTitle">商品を追加</h2>
+        </div>
+        <button type="button" id="closeProductBtn" class="icon-btn" aria-label="閉じる">×</button>
+      </div>
+      <div id="productPreview" class="product-preview">
+        <img id="productPreviewImg" alt="" hidden />
+        <p id="productPreviewHint" class="photo-placeholder">写真を選択するか、貼り付けてください</p>
+      </div>
+      <div class="product-image-actions">
+        <button type="button" id="productPickBtn" class="secondary-btn">写真を選択</button>
+        <button type="button" id="productPasteBtn" class="ghost-btn">貼り付け</button>
+      </div>
+      <label>
+        <span>商品名</span>
+        <input id="productNameInput" maxlength="40" placeholder="例：ジェニフィック" />
+      </label>
+      <p id="productError" class="error" aria-live="polite"></p>
+      <div class="dialog-actions">
+        <button type="button" id="productDeleteBtn" class="danger-btn hidden">削除</button>
+        <span class="spacer"></span>
+        <button type="button" id="productCancelBtn" class="ghost-btn">キャンセル</button>
+        <button type="button" id="productSaveBtn" class="primary-btn">保存</button>
+      </div>
     </div>
   </dialog>
 
