@@ -6,9 +6,10 @@ const state = {
   exercises: [],
   habits: ["", "", "", "", "", "", "", ""],
   imageFits: {},
-  products: { cosmetics: [], bath: [] },
+  products: { cosmetics: [], bath: [], mama: [], yuri: [] },
   productsReady: false,
   needProductMigration: false,
+  needSuppMigration: false,
   categoryNames: {},
   hiddenCategoryIds: [],
   filter: "すべて",
@@ -24,6 +25,7 @@ const state = {
 
 let pendingPhotoId = null;
 let pendingRenameId = null;
+let pendingProductRename = null;
 let pendingBoardId = null;
 let currentBoardId = null;
 let selectedBoardId = null;
@@ -34,14 +36,25 @@ let pendingProductDataUrl = "";
 let productEditGroup = null;
 let productEditId = null;
 
+const PRODUCT_GROUP_IDS = ["cosmetics", "bath", "mama", "yuri"];
 const PRODUCT_LISTS = {
   cosmetics: "cosmeticsList",
-  bath: "bathList"
+  bath: "bathList",
+  mama: "mamaList",
+  yuri: "yuriList"
 };
 const LEGACY_PRODUCT_IDS = {
   cosmetics: "care-cosmetics",
   bath: "care-bath"
 };
+const LEGACY_SUPP_IDS = {
+  mama: "supp-mama",
+  yuri: "supp-yuri"
+};
+
+function emptyProducts() {
+  return { cosmetics: [], bath: [], mama: [], yuri: [] };
+}
 
 const parts = ["すべて", "首", "肩・背中", "腰", "股関節", "脚", "全身", "その他"];
 
@@ -111,20 +124,30 @@ function getFit(id) {
   return state.imageFits[id];
 }
 
-function normalizeProducts(raw) {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
-  if (!Array.isArray(raw.cosmetics) || !Array.isArray(raw.bath)) return null;
-  const cleanItem = (item) => {
+function normalizeProductItems(list) {
+  if (!Array.isArray(list)) return [];
+  return list.map(item => {
     if (!item || typeof item !== "object" || !item.id) return null;
     return {
       id: String(item.id),
       name: String(item.name ?? "").trim() || "名称未設定"
     };
-  };
+  }).filter(Boolean);
+}
+
+function normalizeProducts(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  if (!Array.isArray(raw.cosmetics) || !Array.isArray(raw.bath)) return null;
   return {
-    cosmetics: raw.cosmetics.map(cleanItem).filter(Boolean),
-    bath: raw.bath.map(cleanItem).filter(Boolean)
+    cosmetics: normalizeProductItems(raw.cosmetics),
+    bath: normalizeProductItems(raw.bath),
+    mama: normalizeProductItems(raw.mama),
+    yuri: normalizeProductItems(raw.yuri)
   };
+}
+
+function productsNeedSuppMigration(raw) {
+  return !(Array.isArray(raw?.mama) && Array.isArray(raw?.yuri));
 }
 
 function normalizeCategoryNames(obj) {
@@ -187,10 +210,12 @@ function loadState() {
       state.products = products;
       state.productsReady = true;
       state.needProductMigration = false;
+      state.needSuppMigration = productsNeedSuppMigration(saved.products);
     } else {
-      state.products = { cosmetics: [], bath: [] };
+      state.products = emptyProducts();
       state.productsReady = false;
       state.needProductMigration = true;
+      state.needSuppMigration = true;
     }
   } catch {
     state.exercises = [];
@@ -198,9 +223,10 @@ function loadState() {
     state.imageFits = {};
     state.categoryNames = {};
     state.hiddenCategoryIds = [];
-    state.products = { cosmetics: [], bath: [] };
+    state.products = emptyProducts();
     state.productsReady = false;
     state.needProductMigration = true;
+    state.needSuppMigration = true;
   }
 }
 
@@ -359,7 +385,7 @@ async function loadHomeImages() {
 }
 
 async function migrateCareProductsIfNeeded() {
-  if (!state.needProductMigration) {
+  if (!state.needProductMigration && !state.needSuppMigration) {
     state.productsReady = true;
     return;
   }
@@ -367,12 +393,22 @@ async function migrateCareProductsIfNeeded() {
   try {
     images = await getAllCardImages();
   } catch {}
-  Object.entries(LEGACY_PRODUCT_IDS).forEach(([group, id]) => {
-    if (images[id] && !state.products[group].some(item => item.id === id)) {
-      state.products[group].push({ id, name: "名称未設定" });
-    }
-  });
-  state.needProductMigration = false;
+  if (state.needProductMigration) {
+    Object.entries(LEGACY_PRODUCT_IDS).forEach(([group, id]) => {
+      if (images[id] && !state.products[group].some(item => item.id === id)) {
+        state.products[group].push({ id, name: "名称未設定" });
+      }
+    });
+    state.needProductMigration = false;
+  }
+  if (state.needSuppMigration) {
+    Object.entries(LEGACY_SUPP_IDS).forEach(([group, id]) => {
+      if (images[id] && !state.products[group].some(item => item.id === id)) {
+        state.products[group].push({ id, name: "名称未設定" });
+      }
+    });
+    state.needSuppMigration = false;
+  }
   state.productsReady = true;
   saveState();
 }
@@ -391,14 +427,28 @@ function applyProductImage(id, dataUrl) {
 }
 
 function applyProductImages(images) {
-  const items = [...state.products.cosmetics, ...state.products.bath];
-  items.forEach(item => applyProductImage(item.id, images[item.id] || ""));
+  PRODUCT_GROUP_IDS.flatMap(group => state.products[group] || []).forEach(item => {
+    applyProductImage(item.id, images[item.id] || "");
+  });
 }
 
 function renderProducts() {
-  renderProductGroup("cosmetics");
-  renderProductGroup("bath");
+  PRODUCT_GROUP_IDS.forEach(renderProductGroup);
   getAllCardImages().then(applyProductImages).catch(() => applyProductImages({}));
+}
+
+function productMenuHtml(group, id) {
+  if (group === "mama" || group === "yuri") {
+    return `
+      <button type="button" data-product-rename="${id}">名前の変更</button>
+      <button type="button" data-product-photo="${id}">画像の変更</button>
+      <button type="button" class="card-menu-delete" data-product-delete="${id}">削除</button>
+    `;
+  }
+  return `
+    <button type="button" data-product-edit="${id}">編集</button>
+    <button type="button" class="card-menu-delete" data-product-delete="${id}">削除</button>
+  `;
 }
 
 function renderProductGroup(group) {
@@ -415,8 +465,7 @@ function renderProductGroup(group) {
       <span class="product-name">${escapeHtml(item.name)}</span>
       <button type="button" class="card-menu-btn" data-product-menu="${item.id}" aria-label="メニュー">…</button>
       <div class="card-menu" data-product-menu-panel="${item.id}">
-        <button type="button" data-product-edit="${item.id}">編集</button>
-        <button type="button" class="card-menu-delete" data-product-delete="${item.id}">削除</button>
+        ${productMenuHtml(group, item.id)}
       </div>
     </article>
   `).join("");
@@ -443,6 +492,23 @@ function renderProductGroup(group) {
       openProductDialog(group, btn.dataset.productEdit);
     });
   });
+  list.querySelectorAll("[data-product-rename]").forEach(btn => {
+    btn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      closeCategoryMenus();
+      openProductRename(group, btn.dataset.productRename);
+    });
+  });
+  list.querySelectorAll("[data-product-photo]").forEach(btn => {
+    btn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      closeCategoryMenus();
+      pendingPhotoId = btn.dataset.productPhoto;
+      pendingBoardId = null;
+      pendingProductPick = false;
+      $("photoInput").click();
+    });
+  });
   list.querySelectorAll("[data-product-delete]").forEach(btn => {
     btn.addEventListener("click", (event) => {
       event.stopPropagation();
@@ -467,11 +533,14 @@ function refreshProductPreview() {
 }
 
 async function openProductDialog(group, id) {
+  if (!PRODUCT_LISTS[group]) return;
+  if (!state.products[group]) state.products[group] = [];
   productEditGroup = group;
   productEditId = id || "";
   pendingProductDataUrl = "";
   $("productError").textContent = "";
   $("productNameInput").value = "";
+  $("productNameInput").placeholder = group === "mama" || group === "yuri" ? "例：鉄" : "例：ジェニフィック";
   if (id) {
     const item = state.products[group].find(x => x.id === id);
     if (!item) return;
@@ -1064,6 +1133,7 @@ function ensurePhotoCardMenus() {
 
 function openCategoryRename(id) {
   if (!CATEGORIES[id] || state.hiddenCategoryIds.includes(id)) return;
+  pendingProductRename = null;
   pendingRenameId = id;
   $("categoryRenameInput").value = getCardLabel(id);
   $("categoryRenameDialog").showModal();
@@ -1071,16 +1141,39 @@ function openCategoryRename(id) {
   $("categoryRenameInput").select();
 }
 
+function openProductRename(group, id) {
+  const item = (state.products[group] || []).find(x => x.id === id);
+  if (!item) return;
+  pendingRenameId = null;
+  pendingProductRename = { group, id };
+  $("categoryRenameInput").value = item.name;
+  $("categoryRenameDialog").showModal();
+  $("categoryRenameInput").focus();
+  $("categoryRenameInput").select();
+}
+
 function closeCategoryRename() {
   pendingRenameId = null;
+  pendingProductRename = null;
   if ($("categoryRenameDialog").open) $("categoryRenameDialog").close();
 }
 
 function saveCategoryRename() {
-  const id = pendingRenameId;
-  if (!CATEGORIES[id]) return;
   const name = $("categoryRenameInput").value.trim().slice(0, 40);
   if (!name) return;
+  if (pendingProductRename) {
+    const { group, id } = pendingProductRename;
+    const item = (state.products[group] || []).find(x => x.id === id);
+    if (!item) return;
+    item.name = name;
+    state.productsReady = true;
+    saveState();
+    closeCategoryRename();
+    renderProducts();
+    return;
+  }
+  const id = pendingRenameId;
+  if (!CATEGORIES[id]) return;
   state.categoryNames[id] = name;
   saveState();
   closeCategoryRename();
@@ -1232,10 +1325,12 @@ async function importBackup(file) {
     if (importedProducts) {
       state.products = importedProducts;
       state.needProductMigration = false;
+      state.needSuppMigration = productsNeedSuppMigration(data.products);
       state.productsReady = true;
     } else {
-      state.products = { cosmetics: [], bath: [] };
+      state.products = emptyProducts();
       state.needProductMigration = true;
+      state.needSuppMigration = true;
       state.productsReady = false;
     }
     saveState();
@@ -1307,6 +1402,7 @@ $("photoInput").addEventListener("change", async (e) => {
       const dataUrl = await readImageDataUrl(file);
       await putCardImage(photoId, dataUrl);
       applyCardImage(photoId, dataUrl);
+      applyProductImage(photoId, dataUrl);
     } else if (boardId) {
       await setBoardImage(boardId, file);
       $("boardMessage").textContent = "画像を入れました。";
@@ -1452,6 +1548,7 @@ $("cancelCategoryRenameBtn").addEventListener("click", closeCategoryRename);
 $("saveCategoryRenameBtn").addEventListener("click", saveCategoryRename);
 $("categoryRenameDialog").addEventListener("close", () => {
   pendingRenameId = null;
+  pendingProductRename = null;
 });
 $("categoryRenameInput").addEventListener("keydown", event => {
   if (event.key === "Enter") {

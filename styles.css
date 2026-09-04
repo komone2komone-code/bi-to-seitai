@@ -245,7 +245,7 @@ button:disabled { cursor: default; opacity: .45; }
 .product-card .card-menu {
   top: 30px;
   right: 2px;
-  min-width: 120px;
+  min-width: 132px;
 }
 .product-preview {
   position: relative;
