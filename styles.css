@@ -115,6 +115,11 @@ button:disabled { cursor: default; opacity: .45; }
   font-weight: 700;
   line-height: 1.25;
 }
+.photo-placeholder[hidden],
+.photo-frame img[hidden],
+.photo-card.has-photo .photo-placeholder {
+  display: none !important;
+}
 .photo-label {
   font-size: 10px;
   font-weight: 700;

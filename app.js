@@ -207,10 +207,12 @@ function applyCardImage(id, dataUrl) {
     img.src = dataUrl;
     img.hidden = false;
     placeholder.hidden = true;
+    card.classList.add("has-photo");
   } else {
     img.removeAttribute("src");
     img.hidden = true;
     placeholder.hidden = false;
+    card.classList.remove("has-photo");
   }
 }
 
