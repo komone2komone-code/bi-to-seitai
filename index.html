@@ -183,19 +183,17 @@
           <p class="section-label">SUPPLEMENT</p>
           <h2>サプリ・漢方</h2>
         </div>
-        <div class="product-group">
-          <div class="product-group-head">
-            <h3>ママ</h3>
-            <button type="button" class="secondary-btn product-add-btn" data-product-add="mama">＋追加</button>
-          </div>
-          <div id="mamaList" class="product-grid"></div>
-        </div>
-        <div class="product-group">
-          <div class="product-group-head">
-            <h3>ゆり</h3>
-            <button type="button" class="secondary-btn product-add-btn" data-product-add="yuri">＋追加</button>
-          </div>
-          <div id="yuriList" class="product-grid"></div>
+        <div class="photo-row photo-row-2">
+          <article class="photo-card" data-supp="mama" data-card="supp-mama">
+            <span class="photo-frame"><img alt="" hidden /><span class="photo-placeholder">＋ 写真を追加</span>
+            </span>
+            <span class="photo-label">ママ</span>
+          </article>
+          <article class="photo-card" data-supp="yuri" data-card="supp-yuri">
+            <span class="photo-frame"><img alt="" hidden /><span class="photo-placeholder">＋ 写真を追加</span>
+            </span>
+            <span class="photo-label">ゆり</span>
+          </article>
         </div>
       </section>
 
@@ -221,6 +219,18 @@
           <button type="button" id="categoryAddBtn" class="secondary-btn">＋ 追加</button>
         </div>
         <div id="categoryList" class="card-grid"></div>
+      </section>
+
+      <section id="suppView" class="category-view hidden">
+        <div class="category-bar">
+          <button type="button" id="suppBackBtn" class="ghost-btn">← 戻る</button>
+          <div class="category-head">
+            <p id="suppKicker" class="section-label">サプリ・漢方</p>
+            <h2 id="suppTitle">サプリ・漢方</h2>
+          </div>
+          <button type="button" id="suppAddBtn" class="secondary-btn">＋追加</button>
+        </div>
+        <div id="suppList" class="product-grid"></div>
       </section>
     </main>
   </div>
