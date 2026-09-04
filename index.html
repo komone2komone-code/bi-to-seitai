@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#FBF7F1" />
+  <title>美と整体</title>
+  <meta name="application-name" content="美と整体" />
+  <meta name="apple-mobile-web-app-title" content="美と整体" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32.png" />
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">BEAUTY & SEITAI</p>
+        <h1>美と整体</h1>
+      </div>
+      <button id="transferBtn" class="ghost-btn">引き継ぎ</button>
+    </header>
+
+    <main>
+      <div id="homeView">
+      <section class="home-block">
+        <div class="home-head">
+          <p class="section-label">MINUTES</p>
+          <h2>Minutes整体</h2>
+        </div>
+        <div class="photo-row">
+          <article class="photo-card" data-card="minutes-5">
+            <span class="photo-frame"><img alt="" hidden /><span class="photo-placeholder">＋ 写真を追加</span>
+              <button type="button" class="photo-edit-btn" data-photo-edit="minutes-5" aria-label="写真編集">写真</button>
+            </span>
+            <span class="photo-label">5分</span>
+          </article>
+          <article class="photo-card" data-card="minutes-10">
+            <span class="photo-frame"><img alt="" hidden /><span class="photo-placeholder">＋ 写真を追加</span>
+              <button type="button" class="photo-edit-btn" data-photo-edit="minutes-10" aria-label="写真編集">写真</button>
+            </span>
+            <span class="photo-label">10分</span>
+          </article>
+          <article class="photo-card" data-card="minutes-15">
+            <span class="photo-frame"><img alt="" hidden /><span class="photo-placeholder">＋ 写真を追加</span>
+              <button type="button" class="photo-edit-btn" data-photo-edit="minutes-15" aria-label="写真編集">写真</button>
+            </span>
+            <span class="photo-label">15分</span>
+          </article>
+          <article class="photo-card" data-card="minutes-solid">
+            <span class="photo-frame"><img alt="" hidden /><span class="photo-placeholder">＋ 写真を追加</span>
+              <button type="button" class="photo-edit-btn" data-photo-edit="minutes-solid" aria-label="写真編集">写真</button>
+            </span>
+            <span class="photo-label">しっかり</span>
+          </article>
+        </div>
+      </section>
+
+      <section class="home-block">
+        <div class="home-head">
+          <p class="section-label">STRETCH</p>
+          <h2>ストレッチ・ツボ押し</h2>
+        </div>
+        <div class="photo-row">
+          <article class="photo-card" data-card="stretch-face">
+            <span class="photo-frame"><img alt="" hidden /><span class="photo-placeholder">＋ 写真を追加</span>
+              <button type="button" class="photo-edit-btn" data-photo-edit="stretch-face" aria-label="写真編集">写真</button>
+            </span>
+            <span class="photo-label">顔</span>
+          </article>
+          <article class="photo-card" data-card="stretch-neck">
+            <span class="photo-frame"><img alt="" hidden /><span class="photo-placeholder">＋ 写真を追加</span>
+              <button type="button" class="photo-edit-btn" data-photo-edit="stretch-neck" aria-label="写真編集">写真</button>
+            </span>
+            <span class="photo-label">首・肩・腕</span>
+          </article>
+          <article class="photo-card" data-card="stretch-waist">
+            <span class="photo-frame"><img alt="" hidden /><span class="photo-placeholder">＋ 写真を追加</span>
+              <button type="button" class="photo-edit-btn" data-photo-edit="stretch-waist" aria-label="写真編集">写真</button>
+            </span>
+            <span class="photo-label">腰</span>
+          </article>
+          <article class="photo-card" data-card="stretch-foot">
+            <span class="photo-frame"><img alt="" hidden /><span class="photo-placeholder">＋ 写真を追加</span>
+              <button type="button" class="photo-edit-btn" data-photo-edit="stretch-foot" aria-label="写真編集">写真</button>
+            </span>
+            <span class="photo-label">足</span>
+          </article>
+        </div>
+      </section>
+
+      <section class="home-block">
+        <div class="home-head">
+          <p class="section-label">TOOLS</p>
+          <h2>物を使う整体</h2>
+        </div>
+        <div class="photo-row">
+          <article class="photo-card" data-card="tools-towel">
+            <span class="photo-frame"><img alt="" hidden /><span class="photo-placeholder">＋ 写真を追加</span>
+              <button type="button" class="photo-edit-btn" data-photo-edit="tools-towel" aria-label="写真編集">写真</button>
+            </span>
+            <span class="photo-label">タオル</span>
+          </article>
+          <article class="photo-card" data-card="tools-roller">
+            <span class="photo-frame"><img alt="" hidden /><span class="photo-placeholder">＋ 写真を追加</span>
+              <button type="button" class="photo-edit-btn" data-photo-edit="tools-roller" aria-label="写真編集">写真</button>
+            </span>
+            <span class="photo-label">ローラー</span>
+          </article>
+          <article class="photo-card" data-card="tools-chair">
+            <span class="photo-frame"><img alt="" hidden /><span class="photo-placeholder">＋ 写真を追加</span>
+              <button type="button" class="photo-edit-btn" data-photo-edit="tools-chair" aria-label="写真編集">写真</button>
+            </span>
+            <span class="photo-label">椅子</span>
+          </article>
+          <article class="photo-card" data-card="tools-wall">
+            <span class="photo-frame"><img alt="" hidden /><span class="photo-placeholder">＋ 写真を追加</span>
+              <button type="button" class="photo-edit-btn" data-photo-edit="tools-wall" aria-label="写真編集">写真</button>
+            </span>
+            <span class="photo-label">壁</span>
+          </article>
+        </div>
+      </section>
+
+      <section class="home-block">
+        <div class="home-head">
+          <p class="section-label">HABITS</p>
+          <h2>痩せる習慣</h2>
+        </div>
+        <div class="habit-grid">
+          <textarea class="habit-box" data-habit="0" rows="2" maxlength="40" placeholder="朝白湯"></textarea>
+          <textarea class="habit-box" data-habit="1" rows="2" maxlength="40" placeholder="姿勢を意識"></textarea>
+          <textarea class="habit-box" data-habit="2" rows="2" maxlength="40" placeholder="間食を減らす"></textarea>
+          <textarea class="habit-box" data-habit="3" rows="2" maxlength="40" placeholder="よく噛む"></textarea>
+        </div>
+      </section>
+
+      <section class="home-block">
+        <div class="home-head">
+          <p class="section-label">BEAUTY</p>
+          <h2>女神・お出かけ前</h2>
+        </div>
+        <div class="photo-row">
+          <article class="photo-card" data-card="beauty-goddess">
+            <span class="photo-frame"><img alt="" hidden /><span class="photo-placeholder">＋ 写真を追加</span>
+              <button type="button" class="photo-edit-btn" data-photo-edit="beauty-goddess" aria-label="写真編集">写真</button>
+            </span>
+            <span class="photo-label">女神</span>
+          </article>
+          <article class="photo-card" data-card="beauty-hair">
+            <span class="photo-frame"><img alt="" hidden /><span class="photo-placeholder">＋ 写真を追加</span>
+              <button type="button" class="photo-edit-btn" data-photo-edit="beauty-hair" aria-label="写真編集">写真</button>
+            </span>
+            <span class="photo-label">髪型</span>
+          </article>
+          <article class="photo-card" data-card="beauty-makeup">
+            <span class="photo-frame"><img alt="" hidden /><span class="photo-placeholder">＋ 写真を追加</span>
+              <button type="button" class="photo-edit-btn" data-photo-edit="beauty-makeup" aria-label="写真編集">写真</button>
+            </span>
+            <span class="photo-label">メイク</span>
+          </article>
+          <article class="photo-card" data-card="beauty-yuri">
+            <span class="photo-frame"><img alt="" hidden /><span class="photo-placeholder">＋ 写真を追加</span>
+              <button type="button" class="photo-edit-btn" data-photo-edit="beauty-yuri" aria-label="写真編集">写真</button>
+            </span>
+            <span class="photo-label">ゆりに施す</span>
+          </article>
+        </div>
+      </section>
+
+      <section class="home-block">
+        <div class="home-head">
+          <p class="section-label">CARE</p>
+          <h2>化粧品・バス</h2>
+        </div>
+        <div class="photo-row photo-row-2">
+          <article class="photo-card board-card" data-board="care-cosmetics" tabindex="0">
+            <div class="photo-frame">
+              <img alt="" hidden />
+              <span class="photo-placeholder">＋ 画像を追加<br>貼り付け / 写真を選択</span>
+            </div>
+            <span class="photo-label">化粧品</span>
+          </article>
+          <article class="photo-card board-card" data-board="care-bath" tabindex="0">
+            <div class="photo-frame">
+              <img alt="" hidden />
+              <span class="photo-placeholder">＋ 画像を追加<br>貼り付け / 写真を選択</span>
+            </div>
+            <span class="photo-label">バス・ヘアケア</span>
+          </article>
+        </div>
+      </section>
+
+      <section class="home-block">
+        <div class="home-head">
+          <p class="section-label">SUPPLEMENT</p>
+          <h2>サプリ・漢方</h2>
+        </div>
+        <div class="photo-row">
+          <article class="photo-card board-card" data-board="supp-mama" tabindex="0">
+            <div class="photo-frame">
+              <img alt="" hidden />
+              <span class="photo-placeholder">＋ 画像を追加<br>貼り付け可</span>
+            </div>
+            <span class="photo-label">ママ</span>
+          </article>
+          <article class="photo-card board-card" data-board="supp-yuri" tabindex="0">
+            <div class="photo-frame">
+              <img alt="" hidden />
+              <span class="photo-placeholder">＋ 画像を追加<br>貼り付け可</span>
+            </div>
+            <span class="photo-label">ゆり</span>
+          </article>
+          <article class="photo-card board-card" data-board="supp-effect" tabindex="0">
+            <div class="photo-frame">
+              <img alt="" hidden />
+              <span class="photo-placeholder">＋ 画像を追加<br>貼り付け可</span>
+            </div>
+            <span class="photo-label">サプリ効用</span>
+          </article>
+          <article class="photo-card board-card" data-board="supp-kampo" tabindex="0">
+            <div class="photo-frame">
+              <img alt="" hidden />
+              <span class="photo-placeholder">＋ 画像を追加<br>貼り付け可</span>
+            </div>
+            <span class="photo-label">漢方効用</span>
+          </article>
+        </div>
+      </section>
+
+      <section class="hero">
+        <div>
+          <p class="hero-kicker">今日の整体</p>
+          <h2 id="todaySummary">まだメニューがありません</h2>
+          <p id="todayDuration" class="muted">登録した動きを「今日のメニュー」に追加してください。</p>
+        </div>
+        <button id="startRoutineBtn" class="primary-btn large" disabled>▶ START</button>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <div>
+            <p class="section-label">TODAY</p>
+            <h2>今日のメニュー</h2>
+          </div>
+          <button id="openAddBtn" class="secondary-btn">＋ 整体を追加</button>
+        </div>
+        <div id="todayList" class="today-list empty-state">
+          <p>まだ今日のメニューはありません。</p>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head wrap">
+          <div>
+            <p class="section-label">LIBRARY</p>
+            <h2>整体ライブラリ</h2>
+          </div>
+          <div class="filters" id="filters"></div>
+        </div>
+        <div id="libraryList" class="card-grid"></div>
+      </section>
+      </div>
+
+      <section id="categoryView" class="category-view hidden">
+        <div class="category-bar">
+          <button type="button" id="categoryBackBtn" class="ghost-btn">← 戻る</button>
+          <div class="category-head">
+            <p id="categoryKicker" class="section-label"></p>
+            <h2 id="categoryTitle"></h2>
+          </div>
+          <button type="button" id="categoryAddBtn" class="secondary-btn">＋ 追加</button>
+        </div>
+        <div id="categoryList" class="card-grid"></div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="exerciseDialog" class="dialog">
+    <form id="exerciseForm" method="dialog" class="dialog-card">
+      <div class="dialog-head">
+        <div>
+          <p class="section-label">ADD / EDIT</p>
+          <h2 id="dialogTitle">整体を追加</h2>
+        </div>
+        <button type="button" id="closeDialogBtn" class="icon-btn" aria-label="閉じる">×</button>
+      </div>
+
+      <input type="hidden" id="exerciseId" />
+      <input type="hidden" id="categoryIdInput" />
+
+      <label>
+        <span>名前</span>
+        <input id="nameInput" required maxlength="60" placeholder="例：肩甲骨はがし" />
+      </label>
+
+      <label>
+        <span>部位</span>
+        <select id="partInput" required>
+          <option value="首">首</option>
+          <option value="肩・背中">肩・背中</option>
+          <option value="腰">腰</option>
+          <option value="股関節">股関節</option>
+          <option value="脚">脚</option>
+          <option value="全身">全身</option>
+          <option value="その他">その他</option>
+        </select>
+      </label>
+
+      <label>
+        <span>YouTube URL</span>
+        <input id="urlInput" required inputmode="url" placeholder="https://www.youtube.com/watch?v=..." />
+      </label>
+
+      <div class="time-grid">
+        <label>
+          <span>開始</span>
+          <input id="startInput" required placeholder="3:12 または 192" />
+        </label>
+        <label>
+          <span>終了</span>
+          <input id="endInput" required placeholder="4:05 または 245" />
+        </label>
+      </div>
+
+      <label>
+        <span>メモ</span>
+        <textarea id="memoInput" rows="3" maxlength="200" placeholder="例：左右10回ずつ"></textarea>
+      </label>
+
+      <label class="check-row">
+        <input id="todayInput" type="checkbox" />
+        <span>今日のメニューに追加する</span>
+      </label>
+
+      <p id="formError" class="error" aria-live="polite"></p>
+
+      <div class="dialog-actions">
+        <button type="button" id="deleteBtn" class="danger-btn hidden">削除</button>
+        <span class="spacer"></span>
+        <button type="button" id="cancelBtn" class="ghost-btn">キャンセル</button>
+        <button type="submit" class="primary-btn">保存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="playerDialog" class="dialog player-dialog">
+    <div class="dialog-card player-card">
+      <div class="dialog-head">
+        <div>
+          <p id="playerPart" class="section-label"></p>
+          <h2 id="playerTitle"></h2>
+        </div>
+        <button type="button" id="closePlayerBtn" class="icon-btn" aria-label="閉じる">×</button>
+      </div>
+
+      <div class="player-frame">
+        <div id="youtubePlayer"></div>
+      </div>
+
+      <div class="player-meta">
+        <span id="playerRange"></span>
+        <span id="playerMemo" class="muted"></span>
+      </div>
+
+      <div class="dialog-actions player-actions">
+        <button type="button" id="prevBtn" class="secondary-btn">← 前へ</button>
+        <span class="spacer"></span>
+        <button type="button" id="nextBtn" class="primary-btn">次へ →</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="transferDialog" class="dialog">
+    <div class="dialog-card">
+      <div class="dialog-head">
+        <div>
+          <p class="section-label">BACKUP</p>
+          <h2>引き継ぎ</h2>
+        </div>
+        <button type="button" id="closeTransferBtn" class="icon-btn" aria-label="閉じる">×</button>
+      </div>
+      <p class="muted">
+        登録したURL・時間・メモ、ホームの写真、画像カード、「痩せる習慣」の言葉は、この端末のブラウザ内に保存されています。
+        機種変更やブラウザ変更の前にバックアップを書き出してください。
+      </p>
+      <div class="transfer-actions">
+        <button id="exportBtn" class="primary-btn">バックアップを書き出す</button>
+        <label class="secondary-btn file-btn">
+          バックアップを読み込む
+          <input id="importInput" type="file" accept="application/json,.json" />
+        </label>
+      </div>
+      <p id="transferMessage" class="status" aria-live="polite"></p>
+    </div>
+  </dialog>
+
+  <dialog id="boardDialog" class="dialog">
+    <div class="dialog-card">
+      <div class="dialog-head">
+        <div>
+          <p class="section-label">IMAGE</p>
+          <h2 id="boardTitle">画像</h2>
+        </div>
+        <button type="button" id="closeBoardBtn" class="icon-btn" aria-label="閉じる">×</button>
+      </div>
+      <div id="boardPreview" class="board-preview">
+        <img id="boardPreviewImg" alt="" hidden />
+        <p id="boardEmptyHint" class="photo-placeholder">画像を貼り付けるか、写真を選択してください</p>
+      </div>
+      <div class="board-zoom">
+        <button type="button" id="boardZoomOut" class="small-btn" aria-label="縮小">−</button>
+        <input id="boardZoom" type="range" min="1" max="3" step="0.05" value="1" />
+        <button type="button" id="boardZoomIn" class="small-btn" aria-label="拡大">＋</button>
+      </div>
+      <p class="muted board-hint">ドラッグで位置を動かせます。PCなら Ctrl+V でも貼り付けできます。</p>
+      <div class="board-actions">
+        <button type="button" id="boardPasteBtn" class="primary-btn">貼り付け</button>
+        <button type="button" id="boardPickBtn" class="secondary-btn">画像を変更</button>
+        <button type="button" id="boardResetBtn" class="ghost-btn">リセット</button>
+        <button type="button" id="boardDeleteBtn" class="danger-btn">削除</button>
+      </div>
+      <p id="boardMessage" class="status" aria-live="polite"></p>
+    </div>
+  </dialog>
+
+  <input id="photoInput" class="hidden" type="file" accept="image/*" />
+
+  <script src="https://www.youtube.com/iframe_api"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
