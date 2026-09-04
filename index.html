@@ -187,12 +187,12 @@
           <article class="photo-card" data-supp="mama" data-card="supp-mama">
             <span class="photo-frame"><img alt="" hidden /><span class="photo-placeholder">＋ 写真を追加</span>
             </span>
-            <span class="photo-label">ママ</span>
+            <span class="photo-label">サプリ</span>
           </article>
           <article class="photo-card" data-supp="yuri" data-card="supp-yuri">
             <span class="photo-frame"><img alt="" hidden /><span class="photo-placeholder">＋ 写真を追加</span>
             </span>
-            <span class="photo-label">ゆり</span>
+            <span class="photo-label">漢方</span>
           </article>
         </div>
       </section>
@@ -267,11 +267,11 @@
       </label>
 
       <label>
-        <span>YouTube URL</span>
-        <input id="urlInput" required inputmode="url" placeholder="https://www.youtube.com/watch?v=..." />
+        <span id="urlLabel">動画URL</span>
+        <input id="urlInput" required inputmode="url" placeholder="YouTube または Instagram のURL" />
       </label>
 
-      <div class="time-grid">
+      <div id="timeFields" class="time-grid">
         <label>
           <span>開始</span>
           <input id="startInput" required placeholder="3:12 または 192" />
@@ -282,7 +282,19 @@
         </label>
       </div>
 
-      <label>
+      <div id="igCoverField" class="ig-cover-field hidden">
+        <span>表紙画像（任意）</span>
+        <div id="igCoverPreview" class="ig-cover-preview">
+          <img id="igCoverPreviewImg" alt="" hidden />
+          <p id="igCoverHint" class="photo-placeholder">写真を選択するか、貼り付けてください</p>
+        </div>
+        <div class="product-image-actions">
+          <button type="button" id="igCoverPickBtn" class="secondary-btn">写真を選択</button>
+          <button type="button" id="igCoverPasteBtn" class="ghost-btn">貼り付け</button>
+        </div>
+      </div>
+
+      <label id="memoField">
         <span>メモ</span>
         <textarea id="memoInput" rows="3" maxlength="200" placeholder="例：左右10回ずつ"></textarea>
       </label>
