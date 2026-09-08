@@ -83,10 +83,10 @@ const CATEGORIES = {
   "tools-roller": { group: "物を使う整体", name: "ローラー" },
   "tools-chair": { group: "物を使う整体", name: "椅子" },
   "tools-wall": { group: "物を使う整体", name: "壁" },
-  "beauty-goddess": { group: "女神・お出かけ前", name: "女神" },
-  "beauty-hair": { group: "女神・お出かけ前", name: "髪型" },
-  "beauty-makeup": { group: "女神・お出かけ前", name: "メイク" },
-  "beauty-yuri": { group: "女神・お出かけ前", name: "ゆりに施す" }
+  "beauty-goddess": { group: "ミューズ・お出かけ前", name: "ミューズ" },
+  "beauty-hair": { group: "ミューズ・お出かけ前", name: "髪型" },
+  "beauty-makeup": { group: "ミューズ・お出かけ前", name: "メイク" },
+  "beauty-yuri": { group: "ミューズ・お出かけ前", name: "ゆりに施す" }
 };
 
 const CARD_SHORT_LABELS = {
@@ -271,6 +271,7 @@ function loadState() {
     state.needSuppMigration = true;
   }
   migrateSuppCardNames();
+  migrateGoddessLabel();
 }
 
 function migrateSuppCardNames() {
@@ -279,6 +280,12 @@ function migrateSuppCardNames() {
   if (!state.suppNames.mama || state.suppNames.mama === "ママ") state.suppNames.mama = "サプリ";
   if (!state.suppNames.yuri || state.suppNames.yuri === "ゆり") state.suppNames.yuri = "漢方";
   if (state.suppNames.mama !== prevMama || state.suppNames.yuri !== prevYuri) saveState();
+}
+
+function migrateGoddessLabel() {
+  if (state.categoryNames["beauty-goddess"] !== "女神") return;
+  state.categoryNames["beauty-goddess"] = "ミューズ";
+  saveState();
 }
 
 function saveState() {
@@ -1586,6 +1593,8 @@ async function importBackup(file) {
       state.needSuppMigration = true;
       state.productsReady = false;
     }
+    migrateSuppCardNames();
+    migrateGoddessLabel();
     saveState();
     if (data.cardImages && typeof data.cardImages === "object") {
       await replaceCardImages(data.cardImages);
