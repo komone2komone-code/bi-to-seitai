@@ -1,9 +1,10 @@
-const CACHE_NAME = "bi-to-seitai-v9";
+const CACHE_NAME = "bi-to-seitai-v10";
 const PRECACHE = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
+  "./info-data.js",
   "./manifest.webmanifest",
   "./favicon.ico",
   "./icons/icon-192.png",

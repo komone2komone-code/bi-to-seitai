@@ -195,6 +195,10 @@
             <span class="photo-label">漢方</span>
           </article>
         </div>
+        <div class="info-entry-row">
+          <button type="button" id="suppInfoBtn" class="info-entry-btn">サプリ情報 ＞</button>
+          <button type="button" id="kampoInfoBtn" class="info-entry-btn">漢方情報 ＞</button>
+        </div>
       </section>
 
       <section class="section">
@@ -231,6 +235,48 @@
           <button type="button" id="suppAddBtn" class="secondary-btn">＋追加</button>
         </div>
         <div id="suppList" class="product-grid"></div>
+      </section>
+
+      <section id="suppInfoView" class="category-view hidden">
+        <div class="category-bar">
+          <button type="button" id="suppInfoBackBtn" class="ghost-btn">← 戻る</button>
+          <div class="category-head">
+            <p class="section-label">REFERENCE</p>
+            <h2>サプリ情報</h2>
+          </div>
+          <span></span>
+        </div>
+        <div id="suppInfoBody" class="info-page"></div>
+      </section>
+
+      <section id="kampoInfoView" class="category-view hidden">
+        <div class="category-bar">
+          <button type="button" id="kampoInfoBackBtn" class="ghost-btn">← 戻る</button>
+          <div class="category-head">
+            <p class="section-label">REFERENCE</p>
+            <h2>漢方情報</h2>
+          </div>
+          <span></span>
+        </div>
+        <div class="info-page">
+          <label class="info-search-wrap">
+            <span>検索</span>
+            <input id="kampoSearchInput" type="search" placeholder="漢方名、鼻水、乾いた咳、頻尿…" />
+          </label>
+          <div id="kampoInfoBody"></div>
+        </div>
+      </section>
+
+      <section id="kampoDetailView" class="category-view hidden">
+        <div class="category-bar">
+          <button type="button" id="kampoDetailBackBtn" class="ghost-btn">← 戻る</button>
+          <div class="category-head">
+            <p class="section-label">KAMPO</p>
+            <h2 id="kampoDetailTitle">漢方</h2>
+          </div>
+          <span></span>
+        </div>
+        <div id="kampoDetailBody" class="info-page"></div>
       </section>
     </main>
   </div>
@@ -446,6 +492,7 @@
   <input id="photoInput" class="hidden" type="file" accept="image/*" />
 
   <script src="https://www.youtube.com/iframe_api"></script>
+  <script src="./info-data.js"></script>
   <script src="./app.js"></script>
   <script>
     if ("serviceWorker" in navigator) {

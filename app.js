@@ -17,6 +17,9 @@ const state = {
   view: "home",
   categoryId: null,
   suppGroup: null,
+  kampoQuery: "",
+  kampoCategory: "",
+  kampoId: null,
   categoryPage: 1,
   player: null,
   queue: [],
@@ -1060,14 +1063,23 @@ function renderCategoryList() {
   });
 }
 
+function hideAppViews() {
+  $("homeView").classList.add("hidden");
+  $("categoryView").classList.add("hidden");
+  $("suppView").classList.add("hidden");
+  $("suppInfoView").classList.add("hidden");
+  $("kampoInfoView").classList.add("hidden");
+  $("kampoDetailView").classList.add("hidden");
+}
+
 function openCategory(id) {
   if (!CATEGORIES[id] || state.hiddenCategoryIds.includes(id)) return;
   state.view = "category";
   state.categoryId = id;
   state.suppGroup = null;
+  state.kampoId = null;
   state.categoryPage = 1;
-  $("homeView").classList.add("hidden");
-  $("suppView").classList.add("hidden");
+  hideAppViews();
   $("categoryView").classList.remove("hidden");
   $("categoryKicker").textContent = CATEGORIES[id].group;
   $("categoryTitle").textContent = getCategoryName(id);
@@ -1084,8 +1096,8 @@ function openSuppList(group) {
   state.view = "supp";
   state.suppGroup = group;
   state.categoryId = null;
-  $("homeView").classList.add("hidden");
-  $("categoryView").classList.add("hidden");
+  state.kampoId = null;
+  hideAppViews();
   $("suppView").classList.remove("hidden");
   $("suppKicker").textContent = "サプリ・漢方";
   $("suppTitle").textContent = getSuppName(group);
@@ -1097,9 +1109,216 @@ function showHome() {
   state.view = "home";
   state.categoryId = null;
   state.suppGroup = null;
-  $("categoryView").classList.add("hidden");
-  $("suppView").classList.add("hidden");
+  state.kampoId = null;
+  hideAppViews();
   $("homeView").classList.remove("hidden");
+}
+
+function infoDisclaimerHtml() {
+  return `<p class="info-disclaimer">${escapeHtml(INFO_DISCLAIMER)}</p>`;
+}
+
+function listHtml(items) {
+  if (!items || !items.length) return "";
+  return `<ul>${items.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`;
+}
+
+function renderSuppInfo() {
+  const schedule = SUPP_INFO.schedule.map(row => `
+    <div class="info-schedule-row">
+      <strong>${escapeHtml(row.time)}</strong>
+      <span>${escapeHtml(row.items)}</span>
+    </div>`).join("");
+  const combos = SUPP_INFO.combinations.map(item => `
+    <details>
+      <summary>${escapeHtml(item.title)}</summary>
+      <span class="info-verdict">${escapeHtml(item.verdict)}</span>
+      <p>${escapeHtml(item.body)}</p>
+    </details>`).join("");
+  const cards = SUPP_INFO.items.map((item, index) => `
+    <button type="button" class="info-card" data-supp-card="${index}">
+      <strong>${escapeHtml(item.name)}</strong>
+      <div class="info-card-body">
+        <p><strong>飲むタイミング</strong><br>${escapeHtml(item.timing)}</p>
+        ${item.notes ? `<p><strong>注意点</strong><br>${escapeHtml(item.notes)}</p>` : ""}
+      </div>
+    </button>`).join("");
+  const drugs = SUPP_INFO.drugInteractions.map(item => `
+    <div class="info-warn">
+      <h4>注意 ${escapeHtml(item.title)}</h4>
+      <p>${escapeHtml(item.body)}</p>
+    </div>`).join("");
+  $("suppInfoBody").innerHTML = `
+    <section class="info-block">
+      <h3>1. 飲み分け</h3>
+      <div class="info-schedule">${schedule}</div>
+      <p class="info-note">${escapeHtml(SUPP_INFO.scheduleNote)}</p>
+    </section>
+    <section class="info-block">
+      <h3>2. 避けたい・分けたい組み合わせ</h3>
+      <div class="info-accordion">${combos}</div>
+    </section>
+    <section class="info-block">
+      <h3>3. サプリ別の飲み方・注意</h3>
+      <div class="info-supp-list">${cards}</div>
+    </section>
+    <section class="info-block">
+      <h3>4. 薬との相互作用</h3>
+      ${drugs}
+    </section>
+    ${infoDisclaimerHtml()}`;
+}
+
+function openSuppInfo() {
+  state.view = "supp-info";
+  state.categoryId = null;
+  state.suppGroup = null;
+  hideAppViews();
+  renderSuppInfo();
+  $("suppInfoView").classList.remove("hidden");
+  window.scrollTo(0, 0);
+}
+
+function normalizeInfoSearch(text) {
+  return String(text ?? "")
+    .toLowerCase()
+    .replace(/\s+/g, "")
+    .replace(/せき/g, "咳")
+    .replace(/たん/g, "痰");
+}
+
+function kampoBlob(item) {
+  return [
+    item.name,
+    item.reading,
+    item.summary,
+    ...(item.symptoms || []),
+    ...(item.features || []),
+    item.timing,
+    ...(item.warnings || []),
+    item.similar,
+    item.detail
+  ].filter(Boolean).join(" ");
+}
+
+function filteredKampoItems() {
+  const query = normalizeInfoSearch(state.kampoQuery);
+  return KAMPO_INFO.items.filter(item => {
+    if (state.kampoCategory && !(item.categories || []).includes(state.kampoCategory)) return false;
+    if (!query) return true;
+    return normalizeInfoSearch(kampoBlob(item)).includes(query);
+  });
+}
+
+function renderKampoInfo() {
+  const cats = [`<button type="button" class="info-cat${state.kampoCategory ? "" : " active"}" data-kampo-cat="">すべて</button>`]
+    .concat(KAMPO_INFO.categories.map(cat =>
+      `<button type="button" class="info-cat${state.kampoCategory === cat ? " active" : ""}" data-kampo-cat="${escapeHtml(cat)}">${escapeHtml(cat)}</button>`
+    )).join("");
+  const interactions = KAMPO_INFO.interactions.map(item => `
+    <div class="info-warn">
+      <h4>注意 ${escapeHtml(item.title)}</h4>
+      <span class="info-verdict">${escapeHtml(item.verdict)}</span>
+      <p>${escapeHtml(item.body)}</p>
+    </div>`).join("");
+  const timingRows = KAMPO_INFO.timingTable.map(row => `
+    <div class="info-schedule-row">
+      <strong>${escapeHtml(row.name)}</strong>
+      <span>${escapeHtml(row.timing)}<br>${escapeHtml(row.note)}</span>
+    </div>`).join("");
+  const items = filteredKampoItems();
+  const cards = items.length
+    ? items.map(item => `
+      <button type="button" class="info-card" data-kampo-id="${escapeHtml(item.id)}">
+        <strong>${escapeHtml(item.name)}</strong>
+        <span class="info-one-liner">「${escapeHtml(item.summary)}」</span>
+      </button>`).join("")
+    : `<p class="info-empty">該当する漢方はありません。</p>`;
+  $("kampoInfoBody").innerHTML = `
+    <section class="info-block">
+      <h3>飲み合わせ注意</h3>
+      ${interactions}
+    </section>
+    <section class="info-block">
+      <h3>飲むタイミング</h3>
+      ${KAMPO_INFO.timingIntro.map(line => `<p class="info-note">${escapeHtml(line)}</p>`).join("")}
+      <div class="info-schedule">${timingRows}</div>
+      ${KAMPO_INFO.timingExtra.map(line => `<p class="info-note">${escapeHtml(line)}</p>`).join("")}
+    </section>
+    <section class="info-block">
+      <h3>症状から探す</h3>
+      <div class="info-cats">${cats}</div>
+    </section>
+    <section class="info-block">
+      <h3>漢方一覧</h3>
+      <div class="info-kampo-list">${cards}</div>
+    </section>
+    ${infoDisclaimerHtml()}`;
+}
+
+function openKampoInfo() {
+  state.view = "kampo-info";
+  state.categoryId = null;
+  state.suppGroup = null;
+  state.kampoId = null;
+  hideAppViews();
+  renderKampoInfo();
+  $("kampoInfoView").classList.remove("hidden");
+  $("kampoSearchInput").value = state.kampoQuery;
+  window.scrollTo(0, 0);
+}
+
+function renderKampoDetail(item) {
+  const blocks = [];
+  if (item.reading) {
+    blocks.push(`<section class="info-detail-block"><h3>読み方</h3><p class="info-reading">${escapeHtml(item.reading)}</p></section>`);
+  }
+  if (item.summary) {
+    blocks.push(`<section class="info-detail-block"><h3>ひとことで</h3><p>「${escapeHtml(item.summary)}」</p></section>`);
+  }
+  if (item.symptoms?.length) {
+    blocks.push(`<section class="info-detail-block"><h3>向いている症状</h3>${listHtml(item.symptoms)}</section>`);
+  }
+  if (item.features?.length) {
+    blocks.push(`<section class="info-detail-block"><h3>特徴</h3>${listHtml(item.features)}</section>`);
+  }
+  if (item.timing) {
+    blocks.push(`<section class="info-detail-block"><h3>飲むタイミング</h3><p>${escapeHtml(item.timing)}</p></section>`);
+  }
+  if (item.warnings?.length) {
+    blocks.push(`<section class="info-detail-block info-warn"><h3>注意点</h3>${listHtml(item.warnings)}</section>`);
+  }
+  if (item.similar) {
+    blocks.push(`<section class="info-detail-block"><h3>似た漢方との違い</h3><p>${escapeHtml(item.similar)}</p></section>`);
+  }
+  if (item.detail) {
+    blocks.push(`
+      <section class="info-detail-block">
+        <details class="info-accordion">
+          <summary>詳しく見る</summary>
+          <p>${escapeHtml(item.detail)}</p>
+        </details>
+      </section>`);
+  }
+  $("kampoDetailTitle").textContent = item.name;
+  $("kampoDetailBody").innerHTML = `
+    <section class="info-detail-block">
+      <h3>漢方名</h3>
+      <p><strong>${escapeHtml(item.name)}</strong></p>
+    </section>
+    ${blocks.join("")}
+    ${infoDisclaimerHtml()}`;
+}
+
+function openKampoDetail(id) {
+  const item = KAMPO_INFO.items.find(k => k.id === id);
+  if (!item) return;
+  state.view = "kampo-detail";
+  state.kampoId = id;
+  hideAppViews();
+  renderKampoDetail(item);
+  $("kampoDetailView").classList.remove("hidden");
+  window.scrollTo(0, 0);
 }
 
 function renderAll() {
@@ -1671,6 +1890,30 @@ $("categoryBackBtn").addEventListener("click", closeCategory);
 $("categoryAddBtn").addEventListener("click", () => openAddDialog(state.categoryId));
 $("suppBackBtn").addEventListener("click", showHome);
 $("suppAddBtn").addEventListener("click", () => openProductDialog(state.suppGroup, ""));
+$("suppInfoBtn").addEventListener("click", openSuppInfo);
+$("kampoInfoBtn").addEventListener("click", openKampoInfo);
+$("suppInfoBackBtn").addEventListener("click", showHome);
+$("kampoInfoBackBtn").addEventListener("click", showHome);
+$("kampoDetailBackBtn").addEventListener("click", openKampoInfo);
+$("kampoSearchInput").addEventListener("input", () => {
+  state.kampoQuery = $("kampoSearchInput").value;
+  renderKampoInfo();
+});
+$("suppInfoBody").addEventListener("click", event => {
+  const btn = event.target.closest("[data-supp-card]");
+  if (!btn) return;
+  btn.classList.toggle("open");
+});
+$("kampoInfoBody").addEventListener("click", event => {
+  const cat = event.target.closest("[data-kampo-cat]");
+  if (cat) {
+    state.kampoCategory = cat.getAttribute("data-kampo-cat") || "";
+    renderKampoInfo();
+    return;
+  }
+  const card = event.target.closest("[data-kampo-id]");
+  if (card) openKampoDetail(card.getAttribute("data-kampo-id"));
+});
 document.addEventListener("click", () => closeCategoryMenus());
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") closeCategoryMenus();
