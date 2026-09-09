@@ -152,12 +152,47 @@ function normalizeProductItems(list) {
 
 function normalizeProducts(raw) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
-  if (!Array.isArray(raw.cosmetics) || !Array.isArray(raw.bath)) return null;
+  if (!PRODUCT_GROUP_IDS.some(group => Array.isArray(raw[group]))) return null;
+  const out = emptyProducts();
+  PRODUCT_GROUP_IDS.forEach(group => {
+    if (Array.isArray(raw[group])) out[group] = normalizeProductItems(raw[group]);
+  });
+  return out;
+}
+
+function mergeProductGroups(primary, secondary) {
+  const out = emptyProducts();
+  PRODUCT_GROUP_IDS.forEach(group => {
+    const byId = new Map();
+    normalizeProductItems(secondary?.[group]).forEach(item => byId.set(item.id, item));
+    normalizeProductItems(primary?.[group]).forEach(item => byId.set(item.id, item));
+    out[group] = [...byId.values()];
+  });
+  return out;
+}
+
+function productsFromLocalStorage() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+    return saved.products && typeof saved.products === "object" && !Array.isArray(saved.products)
+      ? saved.products
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function snapshotProductsForBackup() {
+  return mergeProductGroups(state.products, productsFromLocalStorage());
+}
+
+function productCounts(products) {
+  const p = products || emptyProducts();
   return {
-    cosmetics: normalizeProductItems(raw.cosmetics),
-    bath: normalizeProductItems(raw.bath),
-    mama: normalizeProductItems(raw.mama),
-    yuri: normalizeProductItems(raw.yuri)
+    cosmetics: (p.cosmetics || []).length,
+    bath: (p.bath || []).length,
+    mama: (p.mama || []).length,
+    yuri: (p.yuri || []).length
   };
 }
 
@@ -302,8 +337,17 @@ function saveState() {
     hiddenCategoryIds: state.hiddenCategoryIds,
     savedAt: new Date().toISOString()
   };
-  if (state.productsReady) data.products = state.products;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  const products = {
+    cosmetics: normalizeProductItems(state.products.cosmetics),
+    bath: normalizeProductItems(state.products.bath),
+    mama: normalizeProductItems(state.products.mama),
+    yuri: normalizeProductItems(state.products.yuri)
+  };
+  const hasProducts = PRODUCT_GROUP_IDS.some(group => products[group].length);
+  if (state.productsReady || hasProducts) data.products = products;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch {}
 }
 
 function openImageDb() {
@@ -353,39 +397,77 @@ async function deleteCardImage(id) {
   });
 }
 
-async function getAllCardImages() {
-  const db = await openImageDb();
-  const store = db.transaction(IMAGE_STORE, "readonly").objectStore(IMAGE_STORE);
+function idbReq(req) {
   return new Promise((resolve, reject) => {
-    const out = {};
-    const req = store.openCursor();
-    req.onsuccess = () => {
-      const cursor = req.result;
-      if (cursor) {
-        out[cursor.key] = cursor.value;
-        cursor.continue();
-      } else {
-        resolve(out);
-      }
-    };
+    req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });
 }
 
+function isImageDataUrl(value) {
+  return typeof value === "string" && value.startsWith("data:image/");
+}
+
+async function getAllCardImages() {
+  const db = await openImageDb();
+  const out = {};
+  try {
+    const tx = db.transaction(IMAGE_STORE, "readonly");
+    const store = tx.objectStore(IMAGE_STORE);
+    const keysReq = store.getAllKeys();
+    const valuesReq = store.getAll();
+    const keys = await idbReq(keysReq);
+    const values = await idbReq(valuesReq);
+    keys.forEach((key, index) => {
+      if (key == null) return;
+      const value = values[index];
+      if (isImageDataUrl(value)) out[String(key)] = value;
+    });
+    return out;
+  } catch {
+    const tx = db.transaction(IMAGE_STORE, "readonly");
+    const store = tx.objectStore(IMAGE_STORE);
+    return new Promise((resolve, reject) => {
+      const req = store.openCursor();
+      req.onsuccess = () => {
+        const cursor = req.result;
+        if (cursor) {
+          if (cursor.key != null && isImageDataUrl(cursor.value)) {
+            out[String(cursor.key)] = cursor.value;
+          }
+          cursor.continue();
+        } else {
+          resolve(out);
+        }
+      };
+      req.onerror = () => reject(req.error);
+    });
+  }
+}
+
+function usableCardImages(images) {
+  const out = {};
+  Object.entries(images || {}).forEach(([id, dataUrl]) => {
+    if (id && isImageDataUrl(dataUrl)) out[id] = dataUrl;
+  });
+  return out;
+}
+
 async function replaceCardImages(images) {
+  const next = usableCardImages(images);
+  if (!Object.keys(next).length) return 0;
   const db = await openImageDb();
   const tx = db.transaction(IMAGE_STORE, "readwrite");
   const store = tx.objectStore(IMAGE_STORE);
   store.clear();
-  Object.entries(images || {}).forEach(([id, dataUrl]) => {
-    if (id && typeof dataUrl === "string" && dataUrl.startsWith("data:image/")) {
-      store.put(dataUrl, id);
-    }
+  Object.entries(next).forEach(([id, dataUrl]) => {
+    store.put(dataUrl, id);
   });
-  return new Promise((resolve, reject) => {
+  await new Promise((resolve, reject) => {
     tx.oncomplete = resolve;
     tx.onerror = () => reject(tx.error);
   });
+  return Object.keys(next).length;
 }
 
 function applyFitToImg(img, id) {
@@ -1759,31 +1841,45 @@ window.onYouTubeIframeAPIReady = function () {
 
 async function exportBackup() {
   $("transferMessage").textContent = "書き出し中...";
-  let cardImages = {};
   try {
-    cardImages = await getAllCardImages();
-  } catch {}
-  const data = {
-    app: "karada-routine",
-    version: 1,
-    exportedAt: new Date().toISOString(),
-    exercises: state.exercises,
-    habits: state.habits,
-    imageFits: state.imageFits,
-    categoryNames: state.categoryNames,
-    suppNames: state.suppNames,
-    hiddenCategoryIds: state.hiddenCategoryIds,
-    products: state.products,
-    cardImages
-  };
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-  const a = document.createElement("a");
-  const date = new Date().toISOString().slice(0,10);
-  a.href = URL.createObjectURL(blob);
-  a.download = `karada-routine-backup-${date}.json`;
-  a.click();
-  URL.revokeObjectURL(a.href);
-  $("transferMessage").textContent = "バックアップを書き出しました。";
+    await storageReady;
+    const products = snapshotProductsForBackup();
+    state.products = products;
+    state.productsReady = true;
+    saveState();
+    let cardImages = {};
+    try {
+      cardImages = await getAllCardImages();
+    } catch {
+      cardImages = {};
+    }
+    const data = {
+      app: "karada-routine",
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      exercises: state.exercises,
+      habits: state.habits,
+      imageFits: state.imageFits,
+      categoryNames: state.categoryNames,
+      suppNames: state.suppNames,
+      hiddenCategoryIds: state.hiddenCategoryIds,
+      products,
+      cardImages
+    };
+    const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
+    const a = document.createElement("a");
+    const date = new Date().toISOString().slice(0, 10);
+    a.href = URL.createObjectURL(blob);
+    a.download = `karada-routine-backup-${date}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    const counts = productCounts(products);
+    const imageCount = Object.keys(cardImages).length;
+    $("transferMessage").textContent =
+      `書き出しました。サプリ${counts.mama}件・漢方${counts.yuri}件・化粧品${counts.cosmetics}件・バス${counts.bath}件、画像${imageCount}枚。`;
+  } catch {
+    $("transferMessage").textContent = "バックアップを書き出せませんでした。";
+  }
 }
 
 async function importBackup(file) {
@@ -1802,8 +1898,8 @@ async function importBackup(file) {
     state.hiddenCategoryIds = normalizeHiddenCategoryIds(data.hiddenCategoryIds);
     const importedProducts = normalizeProducts(data.products);
     if (importedProducts) {
-      state.products = importedProducts;
-      state.needProductMigration = false;
+      state.products = mergeProductGroups(importedProducts, null);
+      state.needProductMigration = !Array.isArray(data.products?.cosmetics) || !Array.isArray(data.products?.bath);
       state.needSuppMigration = productsNeedSuppMigration(data.products);
       state.productsReady = true;
     } else {
@@ -1815,13 +1911,16 @@ async function importBackup(file) {
     migrateSuppCardNames();
     migrateGoddessLabel();
     saveState();
+    let imageCount = 0;
     if (data.cardImages && typeof data.cardImages === "object") {
-      await replaceCardImages(data.cardImages);
+      imageCount = await replaceCardImages(data.cardImages);
     }
     await migrateCareProductsIfNeeded();
     renderAll();
     await loadHomeImages();
-    $("transferMessage").textContent = `${clean.length}件を読み込みました。`;
+    const counts = productCounts(state.products);
+    $("transferMessage").textContent =
+      `読み込みました。動画${clean.length}件、サプリ${counts.mama}件・漢方${counts.yuri}件・化粧品${counts.cosmetics}件・バス${counts.bath}件、画像${imageCount}枚。`;
   } catch {
     $("transferMessage").textContent = "このファイルは読み込めませんでした。";
   }
@@ -2116,6 +2215,6 @@ ensurePhotoCardMenus();
 ensureSuppCardMenus();
 renderAll();
 loadHomeImages();
-migrateCareProductsIfNeeded().then(() => {
+const storageReady = migrateCareProductsIfNeeded().then(() => {
   renderProducts();
 });
